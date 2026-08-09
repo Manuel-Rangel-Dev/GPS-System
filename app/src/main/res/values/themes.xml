@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.UninorteLocator" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Color primario / de acento (botón principal) -->
+        <item name="colorPrimary">@color/uninorte_red</item>
+        <item name="colorPrimaryVariant">@color/uninorte_red_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- Fondo general de la app -->
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="colorSurface">@color/background_dark</item>
+        <item name="colorOnSurface">@color/white</item>
+
+        <!-- Barra de estado -->
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+
+</resources>

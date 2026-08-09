@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta base -->
+    <color name="black">#000000</color>
+    <color name="background_dark">#121212</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Rojo institucional Uninorte -->
+    <color name="uninorte_red">#C8102E</color>
+    <color name="uninorte_red_dark">#8F0B20</color>
+
+    <!-- Colores de soporte -->
+    <color name="text_secondary">#B3B3B3</color>
+    <color name="card_background">#1E1E1E</color>
+    <color name="divider">#2A2A2A</color>
+</resources>
