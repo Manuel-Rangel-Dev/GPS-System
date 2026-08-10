@@ -34,5 +34,5 @@
     <string name="error_sms_with_code">No se pudo enviar el SMS. Código: %1$d</string>
     <string name="error_unknown">error desconocido</string>
     <string name="sms_queued_to">SMS preparado para %1$s</string>
-    <string name="sms_location_message">Lat: %1$.6f\nLong: %2$.6f\nHora Colombia: %3$s</string>
+    <string name="sms_location_message">Lat: %1$.6f\nLong: %2$.6f\nHora UTC: %3$s\nHora Colombia: %4$s</string>
 </resources>

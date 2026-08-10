@@ -229,7 +229,8 @@ class MainActivity : AppCompatActivity() {
 
                 val lat = location.latitude
                 val lng = location.longitude
-                val timestamp = obtenerTimestampActual()
+                val timestampUtc = obtenerTimestampUbicacion(location.time, "UTC")
+                val timestampColombia = obtenerTimestampUbicacion(location.time, "America/Bogota")
 
                 // Actualizamos la interfaz con las coordenadas obtenidas
                 tvLatitude.text = getString(R.string.latitude_value, lat)
@@ -237,11 +238,11 @@ class MainActivity : AppCompatActivity() {
 
                 // Construimos y enviamos el mensaje
                 val numero = normalizarNumero(etPhoneNumber.text.toString()) ?: return@launch
-                val mensaje = construirMensaje(lat, lng, timestamp)
+                val mensaje = construirMensaje(lat, lng, timestampUtc, timestampColombia)
                 val smsEnviado = enviarSms(numero, mensaje)
 
                 if (smsEnviado) {
-                    tvLastSent.text = getString(R.string.last_sent_value, timestamp)
+                    tvLastSent.text = getString(R.string.last_sent_value, timestampColombia)
                     tvStatus.text = getString(R.string.status_sms_waiting_confirmation)
                     mostrarSnackbar(getString(R.string.sms_queued_to, numero))
                 } else {
@@ -258,19 +259,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -----------------------------------------------------------------
-    // Genera la hora de Colombia con seis decimales: "17:43:55.878000"
+    // Formatea la hora UTC del fix de ubicación. En GPS/GNSS esa hora
+    // proviene de la referencia temporal de los satélites.
     // -----------------------------------------------------------------
-    private fun obtenerTimestampActual(): String {
+    private fun obtenerTimestampUbicacion(timestampMillis: Long, timeZoneId: String): String {
         val formato = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
-        formato.timeZone = TimeZone.getTimeZone("America/Bogota")
-        return "${formato.format(Date())}000"
+        formato.timeZone = TimeZone.getTimeZone(timeZoneId)
+        return "${formato.format(Date(timestampMillis))}000"
     }
 
     // -----------------------------------------------------------------
     // Construye el texto del SMS con coordenadas, enlace y timestamp
     // -----------------------------------------------------------------
-    private fun construirMensaje(lat: Double, lng: Double, timestamp: String): String {
-        return getString(R.string.sms_location_message, lat, lng, timestamp)
+    private fun construirMensaje(
+        lat: Double,
+        lng: Double,
+        timestampUtc: String,
+        timestampColombia: String
+    ): String {
+        return getString(R.string.sms_location_message, lat, lng, timestampUtc, timestampColombia)
     }
 
     // -----------------------------------------------------------------
