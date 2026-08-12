@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:padding="24dp">
 
-        <!-- Título -->
+        <!-- Title -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="0dp"
@@ -40,7 +40,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
-        <!-- Campo: número de teléfono -->
+        <!-- Field: Phone number -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPhone"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -64,7 +64,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Botón principal -->
+        <!-- Main button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSendLocation"
             android:layout_width="0dp"
@@ -84,7 +84,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tilPhone" />
 
-        <!-- Tarjeta de resultados -->
+        <!-- Results card -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardResult"
             android:layout_width="0dp"
@@ -148,7 +148,7 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Estado / progreso -->
+        <!-- Status/progress -->
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="0dp"

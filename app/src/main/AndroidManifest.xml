@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permisos de ubicación (fina y aproximada) -->
+    <!-- Location Permissions (Fine and Approximate) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Permiso para enviar SMS -->
+    <!-- Permission to Send SMS Messages -->
     <uses-permission android:name="android.permission.SEND_SMS" />
 
-    <!-- Declara que la app usa GPS, pero no lo hace obligatorio -->
+    <!-- It states that the app uses GPS -->
     <uses-feature
         android:name="android.hardware.location.gps"
-        android:required="false" />
+        android:required="true" />
+
+    <!-- The device needs the proper hardware to send an SMS -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="true" />
 
     <application
         android:allowBackup="true"

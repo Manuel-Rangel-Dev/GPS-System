@@ -32,7 +32,7 @@ android {
 }
 
 dependencies {
-    // Base de Android/Kotlin
+    // Android/Kotlin Basics
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -40,10 +40,10 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.cardview)
 
-    // Google Play Services - Ubicación (FusedLocationProviderClient)
+    // Google Play Services - Location (FusedLocationProviderClient)
     implementation(libs.play.services.location)
 
-    // Coroutines (para manejar la ubicación de forma asíncrona y ordenada)
+    // Coroutines (for handling location asynchronously and in an ordered manner)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
