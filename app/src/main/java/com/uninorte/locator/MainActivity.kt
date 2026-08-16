@@ -1,17 +1,9 @@
 package com.uninorte.locator
 
 import android.Manifest
-import android.app.Activity
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
-import android.telephony.SmsManager
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,8 +16,16 @@ import com.google.android.gms.location.Priority
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,70 +34,35 @@ import java.util.TimeZone
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val ACTION_SMS_SENT = "com.uninorte.locator.SMS_SENT"
-        private const val ACTION_SMS_DELIVERED = "com.uninorte.locator.SMS_DELIVERED"
+        // Mismo puerto para TCP y UDP (regla de forwarding TCP/UDP combinada en el router)
+        private const val PUERTO = 5000
+        private const val TIMEOUT_CONEXION_MS = 3000
     }
 
     // Cliente de Google Play Services para obtener ubicación
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-    // Referencias a las vistas (sin View Binding, para mantenerlo simple y explícito)
-    private lateinit var etPhoneNumber: TextInputEditText
+    // Referencias a las vistas
+    private lateinit var etIpAddress: TextInputEditText
     private lateinit var btnSendLocation: MaterialButton
     private lateinit var tvLatitude: TextView
     private lateinit var tvLongitude: TextView
     private lateinit var tvLastSent: TextView
     private lateinit var tvStatus: TextView
 
-    private val smsSentReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val mensaje = when (resultCode) {
-                Activity.RESULT_OK -> getString(R.string.status_sms_sent_to_operator)
-                SmsManager.RESULT_ERROR_GENERIC_FAILURE -> getString(R.string.error_sms_generic)
-                SmsManager.RESULT_ERROR_NO_SERVICE -> getString(R.string.error_sms_no_service)
-                SmsManager.RESULT_ERROR_NULL_PDU -> getString(R.string.error_sms_null_pdu)
-                SmsManager.RESULT_ERROR_RADIO_OFF -> getString(R.string.error_sms_radio_off)
-                else -> getString(R.string.error_sms_with_code, resultCode)
-            }
-            tvStatus.text = mensaje
-            mostrarSnackbar(mensaje)
-        }
-    }
-
-    private val smsDeliveredReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val mensaje = if (resultCode == Activity.RESULT_OK) {
-                getString(R.string.status_sms_delivered)
-            } else {
-                getString(R.string.status_sms_not_delivered)
-            }
-            tvStatus.text = mensaje
-            mostrarSnackbar(mensaje)
-        }
-    }
-
     // -----------------------------------------------------------------
-    // Lanzador de permisos: pedimos UBICACIÓN y SMS al mismo tiempo.
-    // El resultado llega como un mapa <permiso, concedido true/false>.
+    // Lanzador de permisos: solo ubicación (ya no se pide SEND_SMS)
     // -----------------------------------------------------------------
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        val smsGranted = permissions[Manifest.permission.SEND_SMS] == true
 
-        if (locationGranted && smsGranted) {
-            // Ambos permisos concedidos: procedemos con el flujo normal
+        if (locationGranted) {
             iniciarCapturaYEnvio()
         } else {
-            // Informamos claramente cuál permiso falta
-            val mensaje = when {
-                !locationGranted && !smsGranted -> getString(R.string.error_permissions_location_sms)
-                !locationGranted -> getString(R.string.error_permission_location)
-                else -> getString(R.string.error_permission_sms)
-            }
-            mostrarSnackbar(mensaje)
+            mostrarSnackbar(getString(R.string.error_permissions_location))
         }
     }
 
@@ -105,27 +70,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inicializamos el cliente de ubicación
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // Enlazamos las vistas por ID
-        etPhoneNumber = findViewById(R.id.etPhoneNumber)
+        etIpAddress = findViewById(R.id.etIpAddress)
         btnSendLocation = findViewById(R.id.btnSendLocation)
         tvLatitude = findViewById(R.id.tvLatitude)
         tvLongitude = findViewById(R.id.tvLongitude)
         tvLastSent = findViewById(R.id.tvLastSent)
         tvStatus = findViewById(R.id.tvStatus)
-        registrarReceiversSms()
 
         btnSendLocation.setOnClickListener {
             onBotonEnviarPresionado()
         }
-    }
-
-    override fun onDestroy() {
-        unregisterReceiver(smsSentReceiver)
-        unregisterReceiver(smsDeliveredReceiver)
-        super.onDestroy()
     }
 
     // -----------------------------------------------------------------
@@ -133,27 +89,23 @@ class MainActivity : AppCompatActivity() {
     // verifica permisos, y si todo está en orden, captura y envía.
     // -----------------------------------------------------------------
     private fun onBotonEnviarPresionado() {
-        val numero = normalizarNumero(etPhoneNumber.text?.toString())
+        val ip = etIpAddress.text?.toString()?.trim()
 
-        // Validación: número no vacío
-        if (numero == null) {
-            mostrarSnackbar(getString(R.string.error_phone_empty))
+        if (ip.isNullOrEmpty()) {
+            mostrarSnackbar(getString(R.string.error_ip_empty))
             return
         }
 
-        // Validación: número colombiano en formato internacional (+57 seguido de 10 dígitos)
-        if (!esNumeroColombianoInternacional(numero)) {
-            mostrarSnackbar(getString(R.string.error_phone_format))
+        if (!esIpv4Valida(ip)) {
+            mostrarSnackbar(getString(R.string.error_ip_format))
             return
         }
 
-        // Validación: GPS/ubicación por red activa en el dispositivo
         if (!isLocationEnabled()) {
             mostrarSnackbar(getString(R.string.error_location_disabled))
             return
         }
 
-        // Verificamos permisos antes de continuar
         if (tienePermisos()) {
             iniciarCapturaYEnvio()
         } else {
@@ -161,9 +113,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // -----------------------------------------------------------------
-    // Verifica si el proveedor de ubicación (GPS o red) está activo
-    // -----------------------------------------------------------------
     private fun isLocationEnabled(): Boolean {
         val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
@@ -179,26 +128,21 @@ class MainActivity : AppCompatActivity() {
             this, Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        val sms = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.SEND_SMS
-        ) == PackageManager.PERMISSION_GRANTED
-
-        return (fineLocation || coarseLocation) && sms
+        return fineLocation || coarseLocation
     }
 
     private fun solicitarPermisos() {
         permissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.SEND_SMS
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
         )
     }
 
     // -----------------------------------------------------------------
-    // Captura la ubicación actual (una sola vez, no continua) y,
-    // si tiene éxito, construye y envía el SMS.
+    // Captura la ubicación actual y, si tiene éxito, envía por
+    // TCP y UDP en paralelo hacia la IP ingresada.
     // -----------------------------------------------------------------
     @Suppress("MissingPermission") // Ya validamos permisos antes de llegar aquí
     private fun iniciarCapturaYEnvio() {
@@ -207,14 +151,12 @@ class MainActivity : AppCompatActivity() {
 
         val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
 
-        // Usamos una corrutina para esperar el resultado de forma ordenada
         lifecycleScope.launch {
             try {
                 val currentLocationRequest = CurrentLocationRequest.Builder()
                     .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
                     .build()
 
-                // getCurrentLocation obtiene una única lectura fresca (no continua)
                 val location = fusedLocationClient.getCurrentLocation(
                     currentLocationRequest,
                     cancellationTokenSource.token
@@ -232,21 +174,30 @@ class MainActivity : AppCompatActivity() {
                 val timestampUtc = obtenerTimestampUbicacion(location.time, "UTC")
                 val timestampColombia = obtenerTimestampUbicacion(location.time, "America/Bogota")
 
-                // Actualizamos la interfaz con las coordenadas obtenidas
                 tvLatitude.text = getString(R.string.latitude_value, lat)
                 tvLongitude.text = getString(R.string.longitude_value, lng)
 
-                // Construimos y enviamos el mensaje
-                val numero = normalizarNumero(etPhoneNumber.text.toString()) ?: return@launch
+                val ip = etIpAddress.text.toString().trim()
                 val mensaje = construirMensaje(lat, lng, timestampUtc, timestampColombia)
-                val smsEnviado = enviarSms(numero, mensaje)
 
-                if (smsEnviado) {
+                tvStatus.text = getString(R.string.status_sending)
+
+                // TCP y UDP se envían en paralelo, cada uno con su propio resultado
+                val tcpDeferred = async { enviarPorTcp(ip, mensaje) }
+                val udpDeferred = async { enviarPorUdp(ip, mensaje) }
+                val tcpOk = tcpDeferred.await()
+                val udpOk = udpDeferred.await()
+
+                val resultado = getString(
+                    R.string.status_send_result,
+                    if (tcpOk) getString(R.string.status_ok) else getString(R.string.status_failed),
+                    if (udpOk) getString(R.string.status_ok) else getString(R.string.status_failed)
+                )
+                tvStatus.text = resultado
+                mostrarSnackbar(resultado)
+
+                if (tcpOk || udpOk) {
                     tvLastSent.text = getString(R.string.last_sent_value, timestampColombia)
-                    tvStatus.text = getString(R.string.status_sms_waiting_confirmation)
-                    mostrarSnackbar(getString(R.string.sms_queued_to, numero))
-                } else {
-                    tvStatus.text = getString(R.string.status_send_failed)
                 }
 
             } catch (e: Exception) {
@@ -259,91 +210,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -----------------------------------------------------------------
-    // Formatea la hora UTC del fix de ubicación. En GPS/GNSS esa hora
-    // proviene de la referencia temporal de los satélites.
+    // Envío TCP: abre conexión, escribe el mensaje y cierra.
     // -----------------------------------------------------------------
+    private suspend fun enviarPorTcp(ip: String, mensaje: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ip, PUERTO), TIMEOUT_CONEXION_MS)
+                socket.getOutputStream().write(mensaje.toByteArray(Charsets.UTF_8))
+                socket.getOutputStream().flush()
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Envío UDP: arma el datagrama y lo manda sin confirmación.
+    // -----------------------------------------------------------------
+    private suspend fun enviarPorUdp(ip: String, mensaje: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            DatagramSocket().use { socket ->
+                val direccion = InetAddress.getByName(ip)
+                val datos = mensaje.toByteArray(Charsets.UTF_8)
+                val paquete = DatagramPacket(datos, datos.size, direccion, PUERTO)
+                socket.send(paquete)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun obtenerTimestampUbicacion(timestampMillis: Long, timeZoneId: String): String {
         val formato = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
         formato.timeZone = TimeZone.getTimeZone(timeZoneId)
         return "${formato.format(Date(timestampMillis))}000"
     }
 
-    // -----------------------------------------------------------------
-    // Construye el texto del SMS con coordenadas, enlace y timestamp
-    // -----------------------------------------------------------------
     private fun construirMensaje(
         lat: Double,
         lng: Double,
         timestampUtc: String,
         timestampColombia: String
     ): String {
-        return getString(R.string.sms_location_message, lat, lng, timestampUtc, timestampColombia)
+        return "Latitud: %.6f\nLongitud: %.6f\nHora UTC: %s\nHora Colombia: %s"
+            .format(Locale.US, lat, lng, timestampUtc, timestampColombia)
     }
 
-    // -----------------------------------------------------------------
-    // Envía el SMS usando SmsManager. Si el mensaje es largo, se divide
-    // automáticamente en varias partes con divideMessage/sendMultipart.
-    // -----------------------------------------------------------------
-    private fun enviarSms(numero: String, mensaje: String): Boolean {
-        return try {
-            val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                getSystemService(SmsManager::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                SmsManager.getDefault()
-            }
-
-            val partes = smsManager.divideMessage(mensaje)
-            val sentIntents = crearPendingIntents(partes.size, ACTION_SMS_SENT)
-            val deliveredIntents = crearPendingIntents(partes.size, ACTION_SMS_DELIVERED)
-            smsManager.sendMultipartTextMessage(numero, null, partes, sentIntents, deliveredIntents)
-            true
-
-        } catch (e: Exception) {
-            mostrarSnackbar(getString(R.string.error_sms_with_detail, e.message ?: getString(R.string.error_unknown)))
-            false
-        }
-    }
-
-    private fun registrarReceiversSms() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(smsSentReceiver, IntentFilter(ACTION_SMS_SENT), RECEIVER_NOT_EXPORTED)
-            registerReceiver(smsDeliveredReceiver, IntentFilter(ACTION_SMS_DELIVERED), RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(smsSentReceiver, IntentFilter(ACTION_SMS_SENT))
-            registerReceiver(smsDeliveredReceiver, IntentFilter(ACTION_SMS_DELIVERED))
-        }
-    }
-
-    private fun crearPendingIntents(cantidad: Int, accion: String): ArrayList<PendingIntent> {
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        return ArrayList(
-            List(cantidad) { index ->
-                PendingIntent.getBroadcast(
-                    this,
-                    index,
-                    Intent(accion).setPackage(packageName),
-                    flags
-                )
-            }
+    private fun esIpv4Valida(ip: String): Boolean {
+        val regex = Regex(
+            "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" +
+                    "(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$"
         )
-    }
-
-    private fun normalizarNumero(numero: String?): String? {
-        val limpio = numero
-            ?.trim()
-            ?.replace(" ", "")
-            ?.replace("-", "")
-
-        return when {
-            limpio.isNullOrEmpty() -> null
-            limpio.matches(Regex("\\d{10}")) -> "+57$limpio"
-            else -> limpio
-        }
-    }
-
-    private fun esNumeroColombianoInternacional(numero: String): Boolean {
-        return numero.matches(Regex("\\+57\\d{10}"))
+        return regex.matches(ip)
     }
 
     private fun mostrarSnackbar(mensaje: String) {

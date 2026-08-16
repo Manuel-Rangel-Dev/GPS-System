@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Uninorte Locator</string>
     <string name="title_send_location">Enviar localización</string>
-    <string name="subtitle_send_location">Comparte tu ubicación actual por SMS</string>
-    <string name="hint_phone_number">Número de celular (Ej: +573011234567)</string>
+    <string name="subtitle_send_location">Comparte tu ubicación actual por TCP y UDP</string>
+    <string name="hint_ip_address">Dirección IP destino (Ej: 190.60.61.93)</string>
     <string name="button_send_location">Enviar localización</string>
     <string name="last_location_title">Última ubicación capturada</string>
     <string name="latitude_empty">Latitud: --</string>
@@ -12,27 +12,15 @@
     <string name="longitude_value">Longitud: %1$.6f</string>
     <string name="last_sent_value">Último envío: %1$s</string>
     <string name="status_getting_location">Obteniendo ubicación...</string>
-    <string name="status_sent">Ubicación enviada correctamente</string>
-    <string name="status_send_failed">No se pudo enviar el SMS</string>
-    <string name="status_sms_waiting_confirmation">SMS enviado al sistema. Esperando confirmación...</string>
-    <string name="status_sms_sent_to_operator">SMS enviado al operador</string>
-    <string name="status_sms_delivered">SMS entregado al destinatario</string>
-    <string name="status_sms_not_delivered">El operador no confirmó la entrega del SMS</string>
-    <string name="error_phone_empty">Ingresa un número de celular válido</string>
-    <string name="error_phone_format">Usa el formato internacional: +573011234567</string>
+    <string name="status_sending">Enviando por TCP y UDP...</string>
+    <string name="status_send_result">TCP: %1$s · UDP: %2$s</string>
+    <string name="status_ok">enviado</string>
+    <string name="status_failed">falló</string>
+    <string name="error_ip_empty">Ingresa una dirección IP válida</string>
+    <string name="error_ip_format">Usa el formato IPv4: 190.60.61.93</string>
     <string name="error_location_disabled">Activa el GPS o la ubicación del dispositivo</string>
-    <string name="error_permissions_location_sms">Se necesitan permisos de ubicación y SMS para continuar</string>
-    <string name="error_permission_location">Se necesita el permiso de ubicación para continuar</string>
-    <string name="error_permission_sms">Se necesita el permiso de SMS para continuar</string>
+    <string name="error_permissions_location">Se necesita el permiso de ubicación para continuar</string>
     <string name="error_location_unavailable">No se pudo obtener la ubicación. Intenta de nuevo</string>
     <string name="error_location_with_detail">Error al obtener la ubicación: %1$s</string>
-    <string name="error_sms_with_detail">No se pudo enviar el SMS: %1$s</string>
-    <string name="error_sms_generic">No se pudo enviar el SMS por un error general</string>
-    <string name="error_sms_no_service">No se pudo enviar el SMS: sin servicio móvil</string>
-    <string name="error_sms_null_pdu">No se pudo enviar el SMS: error de PDU</string>
-    <string name="error_sms_radio_off">No se pudo enviar el SMS: radio móvil apagada</string>
-    <string name="error_sms_with_code">No se pudo enviar el SMS. Código: %1$d</string>
     <string name="error_unknown">error desconocido</string>
-    <string name="sms_queued_to">SMS preparado para %1$s</string>
-    <string name="sms_location_message">Lat: %1$.6f Long: %2$.6f UTC: %3$s COL: %4$s</string>
 </resources>

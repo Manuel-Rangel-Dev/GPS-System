@@ -5,17 +5,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Permission to Send SMS Messages -->
-    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Permission for TCP/UDP sockets -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- It states that the app uses GPS -->
     <uses-feature
         android:name="android.hardware.location.gps"
-        android:required="true" />
-
-    <!-- The device needs the proper hardware to send an SMS -->
-    <uses-feature
-        android:name="android.hardware.telephony"
         android:required="true" />
 
     <application

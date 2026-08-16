@@ -42,12 +42,12 @@
 
         <!-- Field: Phone number -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPhone"
+            android:id="@+id/tilIp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:hint="@string/hint_phone_number"
+            android:hint="@string/hint_ip_address"
             app:boxStrokeColor="@color/uninorte_red"
             app:hintTextColor="@color/uninorte_red"
             app:layout_constraintEnd_toEndOf="parent"
@@ -55,11 +55,12 @@
             app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPhoneNumber"
+                android:id="@+id/etIpAddress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="phone"
-                android:maxLength="13"
+                android:digits="0123456789."
+                android:inputType="text"
+                android:maxLength="15"
                 android:textColor="@color/white" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -82,7 +83,7 @@
             app:iconTint="@color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilPhone" />
+            app:layout_constraintTop_toBottomOf="@id/tilIp" />
 
         <!-- Results card -->
         <androidx.cardview.widget.CardView
