@@ -4,28 +4,34 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,83 +40,223 @@ import java.util.TimeZone
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        // Mismo puerto para TCP y UDP (regla de forwarding TCP/UDP combinada en el router)
-        private const val PUERTO = 5000
-        private const val TIMEOUT_CONEXION_MS = 3000
+        private const val PUERTO_UDP = 5000
+        private const val INTERVALO_ENVIO_MS = 10_000L
     }
 
-    // Cliente de Google Play Services para obtener ubicación
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-    // Referencias a las vistas
     private lateinit var etIpAddress: TextInputEditText
-    private lateinit var btnSendLocation: MaterialButton
+    private lateinit var btnToggleEnvio: MaterialButton
+    private lateinit var btnDebugSend: MaterialButton
     private lateinit var tvLatitude: TextView
     private lateinit var tvLongitude: TextView
     private lateinit var tvLastSent: TextView
     private lateinit var tvStatus: TextView
 
-    // -----------------------------------------------------------------
-    // Lanzador de permisos: solo ubicación (ya no se pide SEND_SMS)
-    // -----------------------------------------------------------------
-    private val permissionLauncher = registerForActivityResult(
+    private var envioAutomaticoJob: Job? = null
+    private var debugModeActivo = false
+    private var enviando = false
+
+    private val permissionLauncherAuto = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (ok) iniciarEnvioAutomatico() else mostrarSnackbar(getString(R.string.error_permissions_location))
+    }
 
-        if (locationGranted) {
-            iniciarCapturaYEnvio()
-        } else {
-            mostrarSnackbar(getString(R.string.error_permissions_location))
-        }
+    private val permissionLauncherDebug = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (ok) enviarUbicacionManual() else mostrarSnackbar(getString(R.string.error_permissions_location))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         etIpAddress = findViewById(R.id.etIpAddress)
-        btnSendLocation = findViewById(R.id.btnSendLocation)
+        btnToggleEnvio = findViewById(R.id.btnToggleEnvio)
+        btnDebugSend = findViewById(R.id.btnDebugSend)
         tvLatitude = findViewById(R.id.tvLatitude)
         tvLongitude = findViewById(R.id.tvLongitude)
         tvLastSent = findViewById(R.id.tvLastSent)
         tvStatus = findViewById(R.id.tvStatus)
 
-        btnSendLocation.setOnClickListener {
-            onBotonEnviarPresionado()
+        btnToggleEnvio.setOnClickListener { onBotonToggleEnvioPresionado() }
+        btnDebugSend.setOnClickListener { onBotonDebugPresionado() }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_debug) {
+            debugModeActivo = !debugModeActivo
+            btnDebugSend.visibility = if (debugModeActivo) View.VISIBLE else View.GONE
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    // ---------- Envío automático (ciclo de 10s) ----------
+
+    private fun onBotonToggleEnvioPresionado() {
+        if (enviando) {
+            detenerEnvioAutomatico()
+            return
+        }
+        if (!validarIpYUbicacion()) return
+
+        if (tienePermisos()) {
+            iniciarEnvioAutomatico()
+        } else {
+            permissionLauncherAuto.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
         }
     }
 
-    // -----------------------------------------------------------------
-    // Punto de entrada al presionar el botón: valida datos, luego
-    // verifica permisos, y si todo está en orden, captura y envía.
-    // -----------------------------------------------------------------
-    private fun onBotonEnviarPresionado() {
-        val ip = etIpAddress.text?.toString()?.trim()
+    private fun iniciarEnvioAutomatico() {
+        enviando = true
+        btnToggleEnvio.text = getString(R.string.button_stop_sending)
 
-        if (ip.isNullOrEmpty()) {
-            mostrarSnackbar(getString(R.string.error_ip_empty))
-            return
+        envioAutomaticoJob = lifecycleScope.launch {
+            while (isActive) {
+                capturarYEnviarUbicacion(esDebug = false)
+                delay(INTERVALO_ENVIO_MS)
+            }
         }
+    }
 
-        if (!esIpv4Valida(ip)) {
-            mostrarSnackbar(getString(R.string.error_ip_format))
-            return
-        }
+    private fun detenerEnvioAutomatico() {
+        envioAutomaticoJob?.cancel()
+        envioAutomaticoJob = null
+        enviando = false
+        btnToggleEnvio.text = getString(R.string.button_start_sending)
+        tvStatus.text = ""
+    }
 
-        if (!isLocationEnabled()) {
-            mostrarSnackbar(getString(R.string.error_location_disabled))
-            return
-        }
+    // ---------- Envío manual (modo Debug) ----------
+
+    private fun onBotonDebugPresionado() {
+        if (!validarIpYUbicacion()) return
 
         if (tienePermisos()) {
-            iniciarCapturaYEnvio()
+            enviarUbicacionManual()
         } else {
-            solicitarPermisos()
+            permissionLauncherDebug.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
         }
+    }
+
+    private fun enviarUbicacionManual() {
+        lifecycleScope.launch { capturarYEnviarUbicacion(esDebug = true) }
+    }
+
+    // ---------- Lógica común de captura + envío UDP ----------
+
+    @Suppress("MissingPermission")
+    private suspend fun capturarYEnviarUbicacion(esDebug: Boolean) {
+        val ip = etIpAddress.text?.toString()?.trim() ?: return
+        if (!esDebug) tvStatus.text = getString(R.string.status_getting_location)
+
+        try {
+            val request = CurrentLocationRequest.Builder()
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                .build()
+
+            val location = fusedLocationClient.getCurrentLocation(
+                request, CancellationTokenSource().token
+            ).await()
+
+            if (location == null) {
+                if (!esDebug) tvStatus.text = ""
+                mostrarSnackbar(getString(R.string.error_location_unavailable))
+                return
+            }
+
+            val lat = location.latitude
+            val lng = location.longitude
+            val fecha = obtenerFechaColombia(location.time)
+            val hora = obtenerHoraColombia(location.time)
+
+            tvLatitude.text = getString(R.string.latitude_value, lat)
+            tvLongitude.text = getString(R.string.longitude_value, lng)
+            if (!esDebug) tvStatus.text = getString(R.string.status_sending)
+
+            val payload = construirPayloadJson(lat, lng, fecha, hora)
+            val ok = enviarPorUdp(ip, payload)
+
+            val resultado = if (ok) getString(R.string.status_send_ok) else getString(R.string.status_send_failed)
+            if (!esDebug) tvStatus.text = resultado
+            mostrarSnackbar(resultado)
+
+            if (ok) tvLastSent.text = getString(R.string.last_sent_value, "$fecha $hora")
+
+        } catch (e: Exception) {
+            if (!esDebug) tvStatus.text = ""
+            mostrarSnackbar(getString(R.string.error_location_with_detail, e.message ?: getString(R.string.error_unknown)))
+        }
+    }
+
+    private suspend fun enviarPorUdp(ip: String, jsonPayload: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            DatagramSocket().use { socket ->
+                val direccion = InetAddress.getByName(ip)
+                val datos = jsonPayload.toByteArray(Charsets.UTF_8)
+                socket.send(DatagramPacket(datos, datos.size, direccion, PUERTO_UDP))
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun construirPayloadJson(lat: Double, lng: Double, fecha: String, hora: String): String {
+        val json = JSONObject()
+        json.put("lat", lat)
+        json.put("lng", lng)
+        json.put("date", fecha)
+        json.put("hour", hora)
+        return json.toString()
+    }
+
+    private fun obtenerFechaColombia(timestampMillis: Long): String {
+        val formato = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        formato.timeZone = TimeZone.getTimeZone("America/Bogota")
+        return formato.format(Date(timestampMillis))
+    }
+
+    private fun obtenerHoraColombia(timestampMillis: Long): String {
+        val formato = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        formato.timeZone = TimeZone.getTimeZone("America/Bogota")
+        return formato.format(Date(timestampMillis))
+    }
+
+    private fun validarIpYUbicacion(): Boolean {
+        val ip = etIpAddress.text?.toString()?.trim()
+        if (ip.isNullOrEmpty()) {
+            mostrarSnackbar(getString(R.string.error_ip_empty)); return false
+        }
+        if (!esIpv4Valida(ip)) {
+            mostrarSnackbar(getString(R.string.error_ip_format)); return false
+        }
+        if (!isLocationEnabled()) {
+            mostrarSnackbar(getString(R.string.error_location_disabled)); return false
+        }
+        return true
     }
 
     private fun isLocationEnabled(): Boolean {
@@ -120,142 +266,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun tienePermisos(): Boolean {
-        val fineLocation = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val coarseLocation = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        return fineLocation || coarseLocation
-    }
-
-    private fun solicitarPermisos() {
-        permissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-        )
-    }
-
-    // -----------------------------------------------------------------
-    // Captura la ubicación actual y, si tiene éxito, envía por
-    // TCP y UDP en paralelo hacia la IP ingresada.
-    // -----------------------------------------------------------------
-    @Suppress("MissingPermission") // Ya validamos permisos antes de llegar aquí
-    private fun iniciarCapturaYEnvio() {
-        tvStatus.text = getString(R.string.status_getting_location)
-        btnSendLocation.isEnabled = false
-
-        val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
-
-        lifecycleScope.launch {
-            try {
-                val currentLocationRequest = CurrentLocationRequest.Builder()
-                    .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                    .build()
-
-                val location = fusedLocationClient.getCurrentLocation(
-                    currentLocationRequest,
-                    cancellationTokenSource.token
-                ).await()
-
-                if (location == null) {
-                    tvStatus.text = ""
-                    btnSendLocation.isEnabled = true
-                    mostrarSnackbar(getString(R.string.error_location_unavailable))
-                    return@launch
-                }
-
-                val lat = location.latitude
-                val lng = location.longitude
-                val timestampUtc = obtenerTimestampUbicacion(location.time, "UTC")
-                val timestampColombia = obtenerTimestampUbicacion(location.time, "America/Bogota")
-
-                tvLatitude.text = getString(R.string.latitude_value, lat)
-                tvLongitude.text = getString(R.string.longitude_value, lng)
-
-                val ip = etIpAddress.text.toString().trim()
-                val mensaje = construirMensaje(lat, lng, timestampUtc, timestampColombia)
-
-                tvStatus.text = getString(R.string.status_sending)
-
-                // TCP y UDP se envían en paralelo, cada uno con su propio resultado
-                val tcpDeferred = async { enviarPorTcp(ip, mensaje) }
-                val udpDeferred = async { enviarPorUdp(ip, mensaje) }
-                val tcpOk = tcpDeferred.await()
-                val udpOk = udpDeferred.await()
-
-                val resultado = getString(
-                    R.string.status_send_result,
-                    if (tcpOk) getString(R.string.status_ok) else getString(R.string.status_failed),
-                    if (udpOk) getString(R.string.status_ok) else getString(R.string.status_failed)
-                )
-                tvStatus.text = resultado
-                mostrarSnackbar(resultado)
-
-                if (tcpOk || udpOk) {
-                    tvLastSent.text = getString(R.string.last_sent_value, timestampColombia)
-                }
-
-            } catch (e: Exception) {
-                tvStatus.text = ""
-                mostrarSnackbar(getString(R.string.error_location_with_detail, e.message ?: getString(R.string.error_unknown)))
-            } finally {
-                btnSendLocation.isEnabled = true
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------
-    // Envío TCP: abre conexión, escribe el mensaje y cierra.
-    // -----------------------------------------------------------------
-    private suspend fun enviarPorTcp(ip: String, mensaje: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(ip, PUERTO), TIMEOUT_CONEXION_MS)
-                socket.getOutputStream().write(mensaje.toByteArray(Charsets.UTF_8))
-                socket.getOutputStream().flush()
-            }
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // -----------------------------------------------------------------
-    // Envío UDP: arma el datagrama y lo manda sin confirmación.
-    // -----------------------------------------------------------------
-    private suspend fun enviarPorUdp(ip: String, mensaje: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            DatagramSocket().use { socket ->
-                val direccion = InetAddress.getByName(ip)
-                val datos = mensaje.toByteArray(Charsets.UTF_8)
-                val paquete = DatagramPacket(datos, datos.size, direccion, PUERTO)
-                socket.send(paquete)
-            }
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun obtenerTimestampUbicacion(timestampMillis: Long, timeZoneId: String): String {
-        val formato = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
-        formato.timeZone = TimeZone.getTimeZone(timeZoneId)
-        return "${formato.format(Date(timestampMillis))}000"
-    }
-
-    private fun construirMensaje(
-        lat: Double,
-        lng: Double,
-        timestampUtc: String,
-        timestampColombia: String
-    ): String {
-        return "Latitud: %.6f\nLongitud: %.6f\nHora UTC: %s\nHora Colombia: %s"
-            .format(Locale.US, lat, lng, timestampUtc, timestampColombia)
+        val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return fine || coarse
     }
 
     private fun esIpv4Valida(ip: String): Boolean {
@@ -267,6 +280,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun mostrarSnackbar(mensaje: String) {
-        Snackbar.make(btnSendLocation, mensaje, Snackbar.LENGTH_LONG).show()
+        Snackbar.make(btnToggleEnvio, mensaje, Snackbar.LENGTH_LONG).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        envioAutomaticoJob?.cancel()
     }
 }

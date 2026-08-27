@@ -1,9 +1,12 @@
 <resources>
     <string name="app_name">Uninorte Locator</string>
-    <string name="title_send_location">Enviar localización</string>
-    <string name="subtitle_send_location">Comparte tu ubicación actual por TCP y UDP</string>
+    <string name="title_send_location">Telemetría UDP</string>
+    <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 10 segundos</string>
     <string name="hint_ip_address">Dirección IP destino (Ej: 190.60.61.93)</string>
-    <string name="button_send_location">Enviar localización</string>
+    <string name="button_start_sending">Comenzar envio</string>
+    <string name="button_stop_sending">Finalizar envio</string>
+    <string name="debug_send_button">Enviar localización</string>
+    <string name="menu_action_debug">Realizar Debug</string>
     <string name="last_location_title">Última ubicación capturada</string>
     <string name="latitude_empty">Latitud: --</string>
     <string name="longitude_empty">Longitud: --</string>
@@ -12,10 +15,9 @@
     <string name="longitude_value">Longitud: %1$.6f</string>
     <string name="last_sent_value">Último envío: %1$s</string>
     <string name="status_getting_location">Obteniendo ubicación...</string>
-    <string name="status_sending">Enviando por TCP y UDP...</string>
-    <string name="status_send_result">TCP: %1$s · UDP: %2$s</string>
-    <string name="status_ok">enviado</string>
-    <string name="status_failed">falló</string>
+    <string name="status_sending">Enviando por UDP...</string>
+    <string name="status_send_ok">Envío UDP exitoso</string>
+    <string name="status_send_failed">Falló el envío UDP</string>
     <string name="error_ip_empty">Ingresa una dirección IP válida</string>
     <string name="error_ip_format">Usa el formato IPv4: 190.60.61.93</string>
     <string name="error_location_disabled">Activa el GPS o la ubicación del dispositivo</string>
