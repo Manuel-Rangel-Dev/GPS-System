@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PUERTO_UDP = 5000
-        private const val INTERVALO_ENVIO_MS = 10_000L
+        private const val INTERVALO_ENVIO_MS = 5_000L
     }
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
