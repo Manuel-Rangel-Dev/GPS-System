@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Uninorte Locator</string>
     <string name="title_send_location">Telemetría UDP</string>
-    <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 10 segundos</string>
+    <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 5 segundos</string>
     <string name="hint_ip_address">Dirección IP destino (Ej: 190.60.61.93)</string>
     <string name="button_start_sending">Comenzar envio</string>
     <string name="button_stop_sending">Finalizar envio</string>
@@ -25,4 +25,7 @@
     <string name="error_location_unavailable">No se pudo obtener la ubicación. Intenta de nuevo</string>
     <string name="error_location_with_detail">Error al obtener la ubicación: %1$s</string>
     <string name="error_unknown">error desconocido</string>
+    <string name="notification_channel_name">Seguimiento de ubicación</string>
+    <string name="notification_tracking_title">Envío automático activo</string>
+    <string name="notification_tracking_text">Enviando ubicación por UDP</string>
 </resources>
