@@ -3,6 +3,8 @@
     <string name="title_send_location">Telemetría UDP</string>
     <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 5 segundos</string>
     <string name="hint_ip_address">Dirección IP destino (Ej: 190.60.61.93)</string>
+    <string name="hint_port">Puerto</string>
+    <string name="default_port">5000</string>
     <string name="button_start_sending">Comenzar envio</string>
     <string name="button_stop_sending">Finalizar envio</string>
     <string name="debug_send_button">Enviar localización</string>
@@ -20,6 +22,8 @@
     <string name="status_send_failed">Falló el envío UDP</string>
     <string name="error_ip_empty">Ingresa una dirección IP válida</string>
     <string name="error_ip_format">Usa el formato IPv4: 190.60.61.93</string>
+    <string name="error_port_empty">Ingresa un puerto válido</string>
+    <string name="error_port_format">El puerto debe estar entre 1 y 65535</string>
     <string name="error_location_disabled">Activa el GPS o la ubicación del dispositivo</string>
     <string name="error_permissions_location">Se necesita el permiso de ubicación para continuar</string>
     <string name="error_location_unavailable">No se pudo obtener la ubicación. Intenta de nuevo</string>

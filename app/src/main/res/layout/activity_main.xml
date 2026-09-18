@@ -49,7 +49,8 @@
                 android:hint="@string/hint_ip_address"
                 app:boxStrokeColor="@color/uninorte_red"
                 app:hintTextColor="@color/uninorte_red"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/tilPort"
+                app:layout_constraintHorizontal_weight="2"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
 
@@ -60,6 +61,33 @@
                     android:digits="0123456789."
                     android:inputType="text"
                     android:maxLength="15"
+                    android:textColor="@color/white" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilPort"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="24dp"
+                android:hint="@string/hint_port"
+                app:boxStrokeColor="@color/uninorte_red"
+                app:hintTextColor="@color/uninorte_red"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/tilIp"
+                app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:digits="0123456789"
+                    android:inputType="number"
+                    android:maxLength="5"
+                    android:text="@string/default_port"
                     android:textColor="@color/white" />
 
             </com.google.android.material.textfield.TextInputLayout>
