@@ -40,63 +40,60 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilIp"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            <TextView
+                android:id="@+id/tvModeLabel"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:hint="@string/hint_ip_address"
-                app:boxStrokeColor="@color/uninorte_red"
-                app:hintTextColor="@color/uninorte_red"
-                app:layout_constraintEnd_toStartOf="@id/tilPort"
-                app:layout_constraintHorizontal_weight="2"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etIpAddress"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:digits="0123456789."
-                    android:inputType="text"
-                    android:maxLength="15"
-                    android:textColor="@color/white" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPort"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="24dp"
-                android:hint="@string/hint_port"
-                app:boxStrokeColor="@color/uninorte_red"
-                app:hintTextColor="@color/uninorte_red"
+                android:text="@string/mode_label"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_weight="1"
-                app:layout_constraintStart_toEndOf="@id/tilIp"
-                app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvSubtitle" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPort"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:digits="0123456789"
-                    android:inputType="number"
-                    android:maxLength="5"
-                    android:text="@string/default_port"
-                    android:textColor="@color/white" />
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleGroupMode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:checkedButton="@id/btnModeProduction"
+                app:selectionRequired="true"
+                app:singleSelection="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvModeLabel">
 
-            </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeProduction"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/mode_production"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    app:strokeColor="@color/uninorte_red" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeTesting"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/mode_testing"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    app:strokeColor="@color/uninorte_red" />
+
+            </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleEnvio"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="24dp"
                 android:backgroundTint="@color/uninorte_red"
                 android:text="@string/button_start_sending"
                 android:textAllCaps="false"
@@ -109,7 +106,7 @@
                 app:iconTint="@color/white"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilIp" />
+                app:layout_constraintTop_toBottomOf="@id/toggleGroupMode" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDebugSend"

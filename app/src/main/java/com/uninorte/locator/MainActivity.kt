@@ -32,11 +32,11 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -55,19 +55,52 @@ import java.util.Locale
 import java.util.TimeZone
 
 // ============================================================================
+// CONFIGURACIÓN DE DESTINOS UDP Y ENTORNOS
+// ============================================================================
+enum class EnvironmentMode {
+    PRODUCTION,
+    TESTING
+}
+
+data class UdpDestination(val ip: String, val port: Int)
+
+private const val IP_1 = "34.200.45.218"
+private const val IP_2 = "52.70.149.97"
+private const val IP_3 = "3.224.240.185"
+private const val IP_4 = "18.233.233.208"
+
+private fun getDestinationsForMode(mode: EnvironmentMode): List<UdpDestination> = when (mode) {
+    EnvironmentMode.PRODUCTION -> listOf(
+        UdpDestination(IP_1, 5000)
+    )
+    EnvironmentMode.TESTING -> listOf(
+        UdpDestination(IP_1, 5001),
+        UdpDestination(IP_2, 5000),
+        UdpDestination(IP_3, 5000),
+        UdpDestination(IP_4, 5000)
+    )
+}
+
+// ============================================================================
 // FUNCIONES COMPARTIDAS DE FECHA Y ENVIO UDP
 // ============================================================================
-// Estas funciones son utilizadas tanto por la pantalla como por el servicio
-// para evitar duplicar la misma logica en dos clases diferentes.
-private suspend fun enviarPorUdp(ip: String, puerto: Int, payload: String): Boolean =
+private suspend fun enviarPorUdp(destinos: List<UdpDestination>, payload: String): Boolean =
     withContext(Dispatchers.IO) {
+        var atLeastOneSuccess = false
         try {
             DatagramSocket().use { socket ->
-                val address = InetAddress.getByName(ip)
                 val data = payload.toByteArray(Charsets.UTF_8)
-                socket.send(DatagramPacket(data, data.size, address, puerto))
+                for (dest in destinos) {
+                    try {
+                        val address = InetAddress.getByName(dest.ip)
+                        socket.send(DatagramPacket(data, data.size, address, dest.port))
+                        atLeastOneSuccess = true
+                    } catch (_: Exception) {
+                        // Continuar con los demás destinos aunque falle uno puntual
+                    }
+                }
             }
-            true
+            atLeastOneSuccess
         } catch (_: Exception) {
             false
         }
@@ -86,8 +119,9 @@ private fun obtenerHoraColombia(timestampMillis: Long): String =
 class MainActivity : AppCompatActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var etIpAddress: TextInputEditText
-    private lateinit var etPort: TextInputEditText
+    private lateinit var toggleGroupMode: MaterialButtonToggleGroup
+    private lateinit var btnModeProduction: MaterialButton
+    private lateinit var btnModeTesting: MaterialButton
     private lateinit var btnToggleEnvio: MaterialButton
     private lateinit var btnDebugSend: MaterialButton
     private lateinit var tvLatitude: TextView
@@ -122,14 +156,27 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        etIpAddress = findViewById(R.id.etIpAddress)
-        etPort = findViewById(R.id.etPort)
+        toggleGroupMode = findViewById(R.id.toggleGroupMode)
+        btnModeProduction = findViewById(R.id.btnModeProduction)
+        btnModeTesting = findViewById(R.id.btnModeTesting)
         btnToggleEnvio = findViewById(R.id.btnToggleEnvio)
         btnDebugSend = findViewById(R.id.btnDebugSend)
         tvLatitude = findViewById(R.id.tvLatitude)
         tvLongitude = findViewById(R.id.tvLongitude)
         tvLastSent = findViewById(R.id.tvLastSent)
         tvStatus = findViewById(R.id.tvStatus)
+
+        val savedMode = LocationTrackingService.savedMode(this)
+        toggleGroupMode.check(
+            if (savedMode == EnvironmentMode.TESTING) R.id.btnModeTesting else R.id.btnModeProduction
+        )
+
+        toggleGroupMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val mode = if (checkedId == R.id.btnModeTesting) EnvironmentMode.TESTING else EnvironmentMode.PRODUCTION
+                LocationTrackingService.saveSelectedMode(this, mode)
+            }
+        }
 
         btnToggleEnvio.setOnClickListener { onBotonToggleEnvioPresionado() }
         btnDebugSend.setOnClickListener { onBotonDebugPresionado() }
@@ -169,7 +216,7 @@ class MainActivity : AppCompatActivity() {
             detenerEnvioAutomatico()
             return
         }
-        if (!validarIpYUbicacion()) return
+        if (!validarUbicacion()) return
 
         if (tienePermisos()) {
             iniciarEnvioAutomatico()
@@ -184,20 +231,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun iniciarEnvioAutomatico() {
-        val ip = etIpAddress.text?.toString()?.trim() ?: return
-        val puerto = etPort.text?.toString()?.trim()?.toIntOrNull() ?: return
-        LocationTrackingService.start(this, ip, puerto)
+        val mode = obtenerModoSeleccionado()
+        LocationTrackingService.start(this, mode)
         btnToggleEnvio.text = getString(R.string.button_stop_sending)
+        actualizarHabilitacionModo(false)
     }
 
     private fun detenerEnvioAutomatico() {
         LocationTrackingService.stop(this)
         btnToggleEnvio.text = getString(R.string.button_start_sending)
         tvStatus.text = ""
+        actualizarHabilitacionModo(true)
     }
 
+    private fun actualizarHabilitacionModo(habilitado: Boolean) {
+        toggleGroupMode.isEnabled = habilitado
+        btnModeProduction.isEnabled = habilitado
+        btnModeTesting.isEnabled = habilitado
+    }
+
+    private fun obtenerModoSeleccionado(): EnvironmentMode =
+        if (toggleGroupMode.checkedButtonId == R.id.btnModeTesting) {
+            EnvironmentMode.TESTING
+        } else {
+            EnvironmentMode.PRODUCTION
+        }
+
     private fun onBotonDebugPresionado() {
-        if (!validarIpYUbicacion()) return
+        if (!validarUbicacion()) return
 
         if (tienePermisos()) {
             enviarUbicacionManual()
@@ -219,8 +280,8 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("MissingPermission")
     private suspend fun capturarYEnviarUbicacion() {
-        val ip = etIpAddress.text?.toString()?.trim() ?: return
-        val puerto = etPort.text?.toString()?.trim()?.toIntOrNull() ?: return
+        val mode = obtenerModoSeleccionado()
+        val destinos = getDestinationsForMode(mode)
         try {
             val request = CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
@@ -246,7 +307,8 @@ class MainActivity : AppCompatActivity() {
                 put("date", date)
                 put("hour", time)
             }.toString()
-            val ok = enviarPorUdp(ip, puerto, payload)
+
+            val ok = enviarPorUdp(destinos, payload)
             val resultado = if (ok) {
                 getString(R.string.status_send_ok)
             } else {
@@ -270,38 +332,22 @@ class MainActivity : AppCompatActivity() {
         btnToggleEnvio.text = getString(
             if (active) R.string.button_stop_sending else R.string.button_start_sending
         )
+        actualizarHabilitacionModo(!active)
+
+        val savedMode = LocationTrackingService.savedMode(this)
+        val targetButtonId = if (savedMode == EnvironmentMode.TESTING) R.id.btnModeTesting else R.id.btnModeProduction
+        if (toggleGroupMode.checkedButtonId != targetButtonId) {
+            toggleGroupMode.check(targetButtonId)
+        }
+
         val state = LocationTrackingService.savedState(this)
         state.latitude?.let { tvLatitude.text = getString(R.string.latitude_value, it) }
         state.longitude?.let { tvLongitude.text = getString(R.string.longitude_value, it) }
         state.lastSent?.let { tvLastSent.text = getString(R.string.last_sent_value, it) }
         state.status?.let { tvStatus.text = it }
-        if (active && etIpAddress.text.isNullOrBlank()) {
-            etIpAddress.setText(LocationTrackingService.savedIp(this))
-        }
-        if (active && etPort.text.isNullOrBlank()) {
-            etPort.setText(LocationTrackingService.savedPort(this).toString())
-        }
     }
 
-    private fun validarIpYUbicacion(): Boolean {
-        val ip = etIpAddress.text?.toString()?.trim()
-        if (ip.isNullOrEmpty()) {
-            mostrarSnackbar(getString(R.string.error_ip_empty))
-            return false
-        }
-        if (!esIpv4Valida(ip)) {
-            mostrarSnackbar(getString(R.string.error_ip_format))
-            return false
-        }
-        val puerto = etPort.text?.toString()?.trim()
-        if (puerto.isNullOrEmpty()) {
-            mostrarSnackbar(getString(R.string.error_port_empty))
-            return false
-        }
-        if (!esPuertoValido(puerto)) {
-            mostrarSnackbar(getString(R.string.error_port_format))
-            return false
-        }
+    private fun validarUbicacion(): Boolean {
         if (!isLocationEnabled()) {
             mostrarSnackbar(getString(R.string.error_location_disabled))
             return false
@@ -325,19 +371,6 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
-    private fun esIpv4Valida(ip: String): Boolean {
-        val regex = Regex(
-            "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" +
-                    "(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$"
-        )
-        return regex.matches(ip)
-    }
-
-    private fun esPuertoValido(puerto: String): Boolean {
-        val numero = puerto.toIntOrNull() ?: return false
-        return numero in 1..65535
-    }
-
     private fun mostrarSnackbar(mensaje: String) {
         Snackbar.make(btnToggleEnvio, mensaje, Snackbar.LENGTH_LONG).show()
     }
@@ -353,27 +386,23 @@ class LocationTrackingService : Service() {
     companion object {
         const val ACTION_START = "com.uninorte.locator.action.START"
         const val ACTION_STOP = "com.uninorte.locator.action.STOP"
-        const val EXTRA_IP = "extra_ip"
-        const val EXTRA_PORT = "extra_port"
-        private const val PUERTO_UDP_DEFAULT = 5000
+        const val EXTRA_MODE = "extra_mode"
 
         private const val CHANNEL_ID = "location_tracking"
         private const val NOTIFICATION_ID = 1001
         private const val INTERVALO_ENVIO_MS = 5_000L
         private const val PREFS_NAME = "location_tracking"
         private const val PREF_ACTIVE = "active"
-        private const val PREF_IP = "ip"
-        private const val PREF_PORT = "port"
+        private const val PREF_MODE = "mode"
         private const val PREF_LATITUDE = "latitude"
         private const val PREF_LONGITUDE = "longitude"
         private const val PREF_LAST_SENT = "last_sent"
         private const val PREF_STATUS = "status"
 
-        fun start(context: Context, ip: String, puerto: Int) {
+        fun start(context: Context, mode: EnvironmentMode) {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_START
-                putExtra(EXTRA_IP, ip)
-                putExtra(EXTRA_PORT, puerto)
+                putExtra(EXTRA_MODE, mode.name)
             }
             ContextCompat.startForegroundService(context, intent)
         }
@@ -390,13 +419,21 @@ class LocationTrackingService : Service() {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(PREF_ACTIVE, false)
 
-        fun savedIp(context: Context): String =
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString(PREF_IP, "") ?: ""
+        fun savedMode(context: Context): EnvironmentMode {
+            val raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(PREF_MODE, EnvironmentMode.PRODUCTION.name)
+            return try {
+                EnvironmentMode.valueOf(raw ?: EnvironmentMode.PRODUCTION.name)
+            } catch (_: Exception) {
+                EnvironmentMode.PRODUCTION
+            }
+        }
 
-        fun savedPort(context: Context): Int =
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getInt(PREF_PORT, PUERTO_UDP_DEFAULT)
+        fun saveSelectedMode(context: Context, mode: EnvironmentMode) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(PREF_MODE, mode.name)
+                .apply()
+        }
 
         fun savedState(context: Context): TrackingState {
             val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -430,18 +467,19 @@ class LocationTrackingService : Service() {
         when (intent?.action) {
             ACTION_STOP -> stopTracking()
             ACTION_START -> {
-                val ip = intent.getStringExtra(EXTRA_IP)?.trim() ?: savedIp(this)
-                val puerto = intent.getIntExtra(EXTRA_PORT, savedPort(this))
-                if (ip.isNotEmpty()) {
-                    startForeground(NOTIFICATION_ID, createNotification())
-                    startTracking(ip, puerto)
-                } else {
-                    stopSelf()
+                val modeStr = intent.getStringExtra(EXTRA_MODE) ?: savedMode(this).name
+                val mode = try {
+                    EnvironmentMode.valueOf(modeStr)
+                } catch (_: Exception) {
+                    EnvironmentMode.PRODUCTION
                 }
+                startForeground(NOTIFICATION_ID, createNotification(mode))
+                startTracking(mode)
             }
             else -> if (isActive(this)) {
-                startForeground(NOTIFICATION_ID, createNotification())
-                startTracking(savedIp(this), savedPort(this))
+                val mode = savedMode(this)
+                startForeground(NOTIFICATION_ID, createNotification(mode))
+                startTracking(mode)
             } else {
                 stopSelf()
             }
@@ -449,26 +487,26 @@ class LocationTrackingService : Service() {
         return START_STICKY
     }
 
-    // Control del ciclo automatico de captura y envio.
-    private fun startTracking(ip: String, puerto: Int) {
+    // Control del ciclo automático de captura y envío.
+    private fun startTracking(mode: EnvironmentMode) {
         trackingJob?.cancel()
+        saveSelectedMode(this, mode)
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
             .putBoolean(PREF_ACTIVE, true)
-            .putString(PREF_IP, ip)
-            .putInt(PREF_PORT, puerto)
             .apply()
 
+        val destinos = getDestinationsForMode(mode)
         trackingJob = serviceScope.launch {
             while (isActive) {
-                captureAndSend(ip, puerto)
+                captureAndSend(destinos)
                 delay(INTERVALO_ENVIO_MS)
             }
         }
     }
 
-    // Captura la ubicacion, construye el JSON y actualiza el estado persistido.
+    // Captura la ubicación, construye el JSON y envía a los destinos configurados.
     @Suppress("MissingPermission")
-    private suspend fun captureAndSend(ip: String, puerto: Int) {
+    private suspend fun captureAndSend(destinos: List<UdpDestination>) {
         if (!hasLocationPermission()) {
             saveStatus(getString(R.string.error_permissions_location))
             return
@@ -495,7 +533,7 @@ class LocationTrackingService : Service() {
                 put("hour", time)
             }.toString()
 
-            val sent = enviarPorUdp(ip, puerto, payload)
+            val sent = enviarPorUdp(destinos, payload)
             val status = if (sent) {
                 getString(R.string.status_send_ok)
             } else {
@@ -534,7 +572,7 @@ class LocationTrackingService : Service() {
         stopSelf()
     }
 
-    // Validacion de permisos y persistencia del estado que lee la interfaz.
+    // Validación de permisos y persistencia del estado que lee la interfaz.
     private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED ||
@@ -548,11 +586,16 @@ class LocationTrackingService : Service() {
         updateNotification(status)
     }
 
-    // Notificacion persistente que informa que el servicio esta ejecutandose.
-    private fun createNotification(): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+    // Notificación persistente que informa que el servicio está ejecutándose.
+    private fun createNotification(mode: EnvironmentMode): Notification {
+        val modeTitle = if (mode == EnvironmentMode.TESTING) {
+            getString(R.string.mode_testing)
+        } else {
+            getString(R.string.mode_production)
+        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_tracking_title))
-            .setContentText(getString(R.string.notification_tracking_text))
+            .setContentText("${getString(R.string.notification_tracking_text)} ($modeTitle)")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(
                 PendingIntent.getActivity(
@@ -565,10 +608,16 @@ class LocationTrackingService : Service() {
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
 
     private fun updateNotification(status: String) {
+        val modeTitle = if (savedMode(this) == EnvironmentMode.TESTING) {
+            getString(R.string.mode_testing)
+        } else {
+            getString(R.string.mode_production)
+        }
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_tracking_title))
+            .setContentTitle("${getString(R.string.notification_tracking_title)} ($modeTitle)")
             .setContentText(status)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
@@ -601,8 +650,8 @@ class LocationTrackingService : Service() {
 // ============================================================================
 // REANUDACION DESPUES DE REINICIAR EL DISPOSITIVO
 // ============================================================================
-// Si el envio estaba activo antes del reinicio, este receptor vuelve a iniciar
-// el servicio cuando Android termina de arrancar.
+// Si el envío estaba activo antes del reinicio, este receptor vuelve a iniciar
+// el servicio cuando Android termina de arrancar con el modo configurado.
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED &&
@@ -610,8 +659,7 @@ class BootReceiver : BroadcastReceiver() {
         ) {
             LocationTrackingService.start(
                 context,
-                LocationTrackingService.savedIp(context),
-                LocationTrackingService.savedPort(context)
+                LocationTrackingService.savedMode(context)
             )
         }
     }
