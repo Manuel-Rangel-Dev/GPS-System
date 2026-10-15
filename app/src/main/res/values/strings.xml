@@ -2,12 +2,6 @@
     <string name="app_name">Uninorte Locator</string>
     <string name="title_send_location">Telemetría UDP</string>
     <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 5 segundos</string>
-    <string name="mode_production">Producción</string>
-    <string name="mode_testing">Testing</string>
-    <string name="mode_label">Selecciona el entorno:</string>
-    <string name="hint_ip_address">Dirección IP destino (Ej: 190.60.61.93)</string>
-    <string name="hint_port">Puerto</string>
-    <string name="default_port">5000</string>
     <string name="button_start_sending">Comenzar envio</string>
     <string name="button_stop_sending">Finalizar envio</string>
     <string name="debug_send_button">Enviar localización</string>

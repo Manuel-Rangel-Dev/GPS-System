@@ -40,60 +40,11 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/tvModeLabel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/mode_label"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvSubtitle" />
-
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/toggleGroupMode"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:checkedButton="@id/btnModeProduction"
-                app:selectionRequired="true"
-                app:singleSelection="true"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvModeLabel">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnModeProduction"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_weight="1"
-                    android:text="@string/mode_production"
-                    android:textAllCaps="false"
-                    android:textSize="15sp"
-                    app:strokeColor="@color/uninorte_red" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnModeTesting"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_weight="1"
-                    android:text="@string/mode_testing"
-                    android:textAllCaps="false"
-                    android:textSize="15sp"
-                    app:strokeColor="@color/uninorte_red" />
-
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleEnvio"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="28dp"
                 android:backgroundTint="@color/uninorte_red"
                 android:text="@string/button_start_sending"
                 android:textAllCaps="false"
@@ -106,7 +57,7 @@
                 app:iconTint="@color/white"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/toggleGroupMode" />
+                app:layout_constraintTop_toBottomOf="@id/tvSubtitle" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDebugSend"
