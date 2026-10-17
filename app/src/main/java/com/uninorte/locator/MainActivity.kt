@@ -99,12 +99,12 @@ private suspend fun enviarPorUdp(destinos: List<UdpDestination>, payload: String
     }
 
 private fun obtenerFechaColombia(timestampMillis: Long): String =
-    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("America/Bogota")
     }.format(Date(timestampMillis))
 
 private fun obtenerHoraColombia(timestampMillis: Long): String =
-    SimpleDateFormat("HH:mm:ss", Locale.getDefault()).apply {
+    SimpleDateFormat("HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("America/Bogota")
     }.format(Date(timestampMillis))
 
