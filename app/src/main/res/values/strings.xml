@@ -29,4 +29,6 @@
     <string name="notification_channel_name">Seguimiento de ubicación</string>
     <string name="notification_tracking_title">Envío automático activo</string>
     <string name="notification_tracking_text">Enviando ubicación por UDP</string>
+    <string name="error_permissions_fine">Activa el permiso de ubicación PRECISA para esta app (no «aproximada»)</string>
+    <string name="action_open_settings">Ajustes</string>
 </resources>

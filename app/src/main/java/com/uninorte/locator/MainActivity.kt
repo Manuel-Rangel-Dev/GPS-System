@@ -11,8 +11,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.os.IBinder
 import android.view.Menu
 import android.view.MenuItem
@@ -121,19 +123,17 @@ class MainActivity : AppCompatActivity() {
     private val permissionLauncherAuto = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         if (ok) iniciarEnvioAutomatico()
-        else mostrarSnackbar(getString(R.string.error_permissions_location))
+        else mostrarErrorPermisoPreciso()
     }
 
     private val permissionLauncherDebug = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         if (ok) enviarUbicacionManual()
-        else mostrarSnackbar(getString(R.string.error_permissions_location))
+        else mostrarErrorPermisoPreciso()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -312,14 +312,24 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED
 
     private fun mostrarSnackbar(mensaje: String) {
         Snackbar.make(btnToggleEnvio, mensaje, Snackbar.LENGTH_LONG).show()
+    }
+
+    // Se muestra cuando el usuario no concedió ubicación precisa. El botón abre los ajustes de la app.
+    private fun mostrarErrorPermisoPreciso() {
+        Snackbar.make(btnToggleEnvio, getString(R.string.error_permissions_fine), Snackbar.LENGTH_LONG)
+            .setAction(getString(R.string.action_open_settings)) {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", packageName, null)
+                    )
+                )
+            }
+            .show()
     }
 }
 
@@ -494,8 +504,6 @@ class LocationTrackingService : Service() {
     // Validación de permisos y persistencia del estado que lee la interfaz.
     private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
 
     private fun saveStatus(status: String) {
