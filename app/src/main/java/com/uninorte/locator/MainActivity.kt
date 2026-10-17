@@ -456,6 +456,7 @@ class LocationTrackingService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var ultimoFixNanos = 0L
+    private var wakeLock: PowerManager.WakeLock? = null
 
     // Android entrega cada fix nuevo una sola vez a este callback (corre en el hilo principal).
     private val locationCallback = object : LocationCallback() {
@@ -498,6 +499,7 @@ class LocationTrackingService : Service() {
             .putBoolean(PREF_ACTIVE, true)
             .apply()
         detenerActualizaciones()
+        adquirirWakeLock()
 
         if (!hasLocationPermission()) {
             saveStatus(getString(R.string.error_permissions_location))
@@ -517,6 +519,19 @@ class LocationTrackingService : Service() {
 
     private fun detenerActualizaciones() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    private fun adquirirWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val powerManager = getSystemService(PowerManager::class.java)
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "uninorte:tracking").apply {
+            acquire(12 * 60 * 60 * 1000L)
+        }
+    }
+
+    private fun liberarWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
     }
 
     // Contador persistente de paquetes enviados (permite medir pérdida de UDP en el servidor).
@@ -583,6 +598,7 @@ class LocationTrackingService : Service() {
 
     private fun stopTracking() {
         detenerActualizaciones()
+        liberarWakeLock()
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
             .putBoolean(PREF_ACTIVE, false)
             .apply()
@@ -646,6 +662,7 @@ class LocationTrackingService : Service() {
 
     override fun onDestroy() {
         detenerActualizaciones()
+        liberarWakeLock()
         serviceScope.cancel()
         super.onDestroy()
     }
