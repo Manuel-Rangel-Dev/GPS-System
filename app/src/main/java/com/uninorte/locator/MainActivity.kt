@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.os.IBinder
 import android.view.Menu
@@ -405,6 +406,8 @@ class LocationTrackingService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val INTERVALO_ENVIO_MS = 5_000L
         private const val INTERVALO_MIN_MS = 4_000L
+        private const val MAX_PRECISION_M = 40f
+        private const val MAX_ANTIGUEDAD_FIX_MS = 10_000L
         private const val PREFS_NAME = "location_tracking"
         private const val PREF_ACTIVE = "active"
         private const val PREF_LATITUDE = "latitude"
@@ -451,6 +454,7 @@ class LocationTrackingService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var ultimoFixNanos = 0L
 
     // Android entrega cada fix nuevo una sola vez a este callback (corre en el hilo principal).
     private val locationCallback = object : LocationCallback() {
@@ -517,6 +521,24 @@ class LocationTrackingService : Service() {
     // Envía por UDP un fix recibido del callback y guarda el estado que lee la interfaz.
     private suspend fun procesarUbicacion(location: Location) {
         try {
+            // Fix repetido (el mismo que ya se procesó)
+            if (location.elapsedRealtimeNanos == ultimoFixNanos) return
+            ultimoFixNanos = location.elapsedRealtimeNanos
+
+            // Precisión mala: se descarta (si no trae precisión, se deja pasar)
+            if (location.hasAccuracy() && location.accuracy > MAX_PRECISION_M) {
+                saveStatus(getString(R.string.status_discarded_accuracy, location.accuracy.toInt()))
+                return
+            }
+
+            // Fix antiguo
+            val antiguedadMs =
+                (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+            if (antiguedadMs > MAX_ANTIGUEDAD_FIX_MS) {
+                saveStatus(getString(R.string.status_discarded_stale, (antiguedadMs / 1000).toInt()))
+                return
+            }
+
             val date = obtenerFechaColombia(location.time)
             val time = obtenerHoraColombia(location.time)
             val payload = construirPayload(location)

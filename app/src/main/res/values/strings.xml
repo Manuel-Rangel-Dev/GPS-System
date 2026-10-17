@@ -31,4 +31,6 @@
     <string name="notification_tracking_text">Enviando ubicación por UDP</string>
     <string name="error_permissions_fine">Activa el permiso de ubicación PRECISA para esta app (no «aproximada»)</string>
     <string name="action_open_settings">Ajustes</string>
+    <string name="status_discarded_accuracy">Fix descartado: precisión %1$d m</string>
+    <string name="status_discarded_stale">Fix descartado: tiene %1$d s de antigüedad</string>
 </resources>
