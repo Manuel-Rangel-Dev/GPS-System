@@ -416,6 +416,12 @@ class LocationTrackingService : Service() {
         private const val PREF_STATUS = "status"
         private const val PREF_SEQ = "seq"
 
+        fun markInactive(context: Context) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean(PREF_ACTIVE, false)
+                .apply()
+        }
+
         fun start(context: Context) {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_START
@@ -479,11 +485,11 @@ class LocationTrackingService : Service() {
         when (intent?.action) {
             ACTION_STOP -> stopTracking()
             ACTION_START -> {
-                startForeground(NOTIFICATION_ID, createNotification())
+                if (!entrarEnPrimerPlano()) return START_NOT_STICKY
                 startTracking()
             }
             else -> if (isActive(this)) {
-                startForeground(NOTIFICATION_ID, createNotification())
+                if (!entrarEnPrimerPlano()) return START_NOT_STICKY
                 startTracking()
             } else {
                 stopSelf()
@@ -519,6 +525,16 @@ class LocationTrackingService : Service() {
 
     private fun detenerActualizaciones() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    // Entra en primer plano; si el sistema lo impide, deja el seguimiento inactivo y se detiene.
+    private fun entrarEnPrimerPlano(): Boolean = try {
+        startForeground(NOTIFICATION_ID, createNotification())
+        true
+    } catch (e: Exception) {
+        markInactive(this)
+        stopSelf()
+        false
     }
 
     private fun adquirirWakeLock() {
@@ -680,9 +696,12 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED &&
             LocationTrackingService.isActive(context)
         ) {
-            LocationTrackingService.start(
-                context
-            )
+            try {
+                LocationTrackingService.start(context)
+            } catch (e: Exception) {
+                // Android 12+ puede impedir iniciar el servicio desde el arranque.
+                LocationTrackingService.markInactive(context)
+            }
         }
     }
 }
