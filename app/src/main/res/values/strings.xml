@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Uninorte Locator</string>
-    <string name="title_send_location">Telemetría UDP</string>
     <string name="subtitle_send_location">Transmite tu ubicación por UDP cada 5 segundos</string>
     <string name="button_start_sending">Comenzar envio</string>
     <string name="button_stop_sending">Finalizar envio</string>
@@ -13,14 +12,8 @@
     <string name="latitude_value">Latitud: %1$.6f</string>
     <string name="longitude_value">Longitud: %1$.6f</string>
     <string name="last_sent_value">Último envío: %1$s</string>
-    <string name="status_getting_location">Obteniendo ubicación...</string>
-    <string name="status_sending">Enviando por UDP...</string>
     <string name="status_send_ok">Envío UDP exitoso</string>
     <string name="status_send_failed">Falló el envío UDP</string>
-    <string name="error_ip_empty">Ingresa una dirección IP válida</string>
-    <string name="error_ip_format">Usa el formato IPv4: 190.60.61.93</string>
-    <string name="error_port_empty">Ingresa un puerto válido</string>
-    <string name="error_port_format">El puerto debe estar entre 1 y 65535</string>
     <string name="error_location_disabled">Activa el GPS o la ubicación del dispositivo</string>
     <string name="error_permissions_location">Se necesita el permiso de ubicación para continuar</string>
     <string name="error_location_unavailable">No se pudo obtener la ubicación. Intenta de nuevo</string>

@@ -303,10 +303,12 @@ class MainActivity : AppCompatActivity() {
             val request = CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
                 .build()
-            val location = fusedLocationClient.getCurrentLocation(
-                request,
-                CancellationTokenSource().token
-            ).await()
+            val cancelacion = CancellationTokenSource()
+            val location = try {
+                fusedLocationClient.getCurrentLocation(request, cancelacion.token).await()
+            } finally {
+                cancelacion.cancel()
+            }
 
             if (location == null) {
                 mostrarSnackbar(getString(R.string.error_location_unavailable))
