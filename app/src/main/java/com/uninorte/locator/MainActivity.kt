@@ -14,6 +14,7 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.os.IBinder
 import android.view.Menu
@@ -140,7 +141,10 @@ class MainActivity : AppCompatActivity() {
     // funciona igual aunque se niegue; solo se pierde la notificación visible.
     private val permissionLauncherNotificaciones = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* sin acción por ahora */ }
+    ) {
+        // Sin importar si se concedió o no, sigue la petición de batería.
+        solicitarExclusionBateriaSiHaceFalta()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -220,6 +224,31 @@ class MainActivity : AppCompatActivity() {
             PackageManager.PERMISSION_GRANTED
         ) {
             permissionLauncherNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            solicitarExclusionBateriaSiHaceFalta()
+        }
+    }
+
+    // Pide una sola vez la exclusión de optimización de batería, para que el sistema
+    // no limite el servicio con la pantalla apagada o el celular en el bolsillo.
+    private fun solicitarExclusionBateriaSiHaceFalta() {
+        val powerManager = getSystemService(PowerManager::class.java)
+        val preferencias = getSharedPreferences("app_settings", MODE_PRIVATE)
+        if (powerManager.isIgnoringBatteryOptimizations(packageName) ||
+            preferencias.getBoolean("bateria_solicitada", false)
+        ) {
+            return
+        }
+        preferencias.edit().putBoolean("bateria_solicitada", true).apply()
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
     }
 
