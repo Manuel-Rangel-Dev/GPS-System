@@ -10,6 +10,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
@@ -108,6 +109,19 @@ private fun obtenerHoraColombia(timestampMillis: Long): String =
     SimpleDateFormat("HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("America/Bogota")
     }.format(Date(timestampMillis))
+
+// Arma el JSON que se envía por UDP. lat/lng/date/hour son obligatorios para todos los
+// servidores del equipo; acc, spd y seq son opcionales (los servidores viejos los ignoran).
+private fun construirPayload(location: Location, seq: Long? = null): String =
+    JSONObject().apply {
+        put("lat", location.latitude)
+        put("lng", location.longitude)
+        put("date", obtenerFechaColombia(location.time))
+        put("hour", obtenerHoraColombia(location.time))
+        if (location.hasAccuracy()) put("acc", Math.round(location.accuracy * 10) / 10.0)
+        if (location.hasSpeed()) put("spd", Math.round(location.speed * 10) / 10.0)
+        if (seq != null) put("seq", seq)
+    }.toString()
 
 class MainActivity : AppCompatActivity() {
 
@@ -300,12 +314,7 @@ class MainActivity : AppCompatActivity() {
             tvLatitude.text = getString(R.string.latitude_value, location.latitude)
             tvLongitude.text = getString(R.string.longitude_value, location.longitude)
 
-            val payload = JSONObject().apply {
-                put("lat", location.latitude)
-                put("lng", location.longitude)
-                put("date", date)
-                put("hour", time)
-            }.toString()
+            val payload = construirPayload(location)
 
             val ok = enviarPorUdp(UDP_DESTINATIONS, payload)
             val resultado = if (ok) {
@@ -500,12 +509,7 @@ class LocationTrackingService : Service() {
 
             val date = obtenerFechaColombia(location.time)
             val time = obtenerHoraColombia(location.time)
-            val payload = JSONObject().apply {
-                put("lat", location.latitude)
-                put("lng", location.longitude)
-                put("date", date)
-                put("hour", time)
-            }.toString()
+            val payload = construirPayload(location)
 
             val sent = enviarPorUdp(UDP_DESTINATIONS, payload)
             val status = if (sent) {
