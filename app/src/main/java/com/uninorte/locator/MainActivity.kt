@@ -414,6 +414,7 @@ class LocationTrackingService : Service() {
         private const val PREF_LONGITUDE = "longitude"
         private const val PREF_LAST_SENT = "last_sent"
         private const val PREF_STATUS = "status"
+        private const val PREF_SEQ = "seq"
 
         fun start(context: Context) {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
@@ -518,6 +519,14 @@ class LocationTrackingService : Service() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
+    // Contador persistente de paquetes enviados (permite medir pérdida de UDP en el servidor).
+    private fun siguienteSeq(): Long {
+        val preferencias = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val siguiente = preferencias.getLong(PREF_SEQ, 0L) + 1
+        preferencias.edit().putLong(PREF_SEQ, siguiente).apply()
+        return siguiente
+    }
+
     // Envía por UDP un fix recibido del callback y guarda el estado que lee la interfaz.
     private suspend fun procesarUbicacion(location: Location) {
         try {
@@ -541,7 +550,7 @@ class LocationTrackingService : Service() {
 
             val date = obtenerFechaColombia(location.time)
             val time = obtenerHoraColombia(location.time)
-            val payload = construirPayload(location)
+            val payload = construirPayload(location, siguienteSeq())
 
             val sent = enviarPorUdp(UDP_DESTINATIONS, payload)
             val status = if (sent) {
