@@ -136,6 +136,12 @@ class MainActivity : AppCompatActivity() {
         else mostrarErrorPermisoPreciso()
     }
 
+    // Permiso de notificaciones (Android 13+). El resultado no bloquea nada: el servicio
+    // funciona igual aunque se niegue; solo se pierde la notificación visible.
+    private val permissionLauncherNotificaciones = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* sin acción por ahora */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -205,6 +211,16 @@ class MainActivity : AppCompatActivity() {
     private fun iniciarEnvioAutomatico() {
         LocationTrackingService.start(this)
         btnToggleEnvio.text = getString(R.string.button_stop_sending)
+        solicitarPermisoNotificacionesSiHaceFalta()
+    }
+
+    private fun solicitarPermisoNotificacionesSiHaceFalta() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncherNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun detenerEnvioAutomatico() {
