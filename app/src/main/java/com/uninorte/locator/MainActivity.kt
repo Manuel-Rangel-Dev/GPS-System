@@ -15,6 +15,7 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.os.IBinder
@@ -32,6 +33,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -40,7 +44,6 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -401,6 +404,7 @@ class LocationTrackingService : Service() {
         private const val CHANNEL_ID = "location_tracking"
         private const val NOTIFICATION_ID = 1001
         private const val INTERVALO_ENVIO_MS = 5_000L
+        private const val INTERVALO_MIN_MS = 4_000L
         private const val PREFS_NAME = "location_tracking"
         private const val PREF_ACTIVE = "active"
         private const val PREF_LATITUDE = "latitude"
@@ -447,7 +451,17 @@ class LocationTrackingService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var trackingJob: Job? = null
+
+    // Android entrega cada fix nuevo una sola vez a este callback (corre en el hilo principal).
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            serviceScope.launch {
+                for (location in result.locations) {
+                    procesarUbicacion(location)
+                }
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -472,41 +486,37 @@ class LocationTrackingService : Service() {
         return START_STICKY
     }
 
-    // Control del ciclo automático de captura y envío.
+    // Registra las actualizaciones continuas de ubicación.
+    @Suppress("MissingPermission")
     private fun startTracking() {
-        trackingJob?.cancel()
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
             .putBoolean(PREF_ACTIVE, true)
             .apply()
+        detenerActualizaciones()
 
-        trackingJob = serviceScope.launch {
-            while (isActive) {
-                captureAndSend()
-                delay(INTERVALO_ENVIO_MS)
-            }
-        }
-    }
-
-    // Captura la ubicación, construye el JSON y envía a los destinos configurados.
-    @Suppress("MissingPermission")
-    private suspend fun captureAndSend() {
         if (!hasLocationPermission()) {
             saveStatus(getString(R.string.error_permissions_location))
             return
         }
 
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, INTERVALO_ENVIO_MS)
+            .setMinUpdateIntervalMillis(INTERVALO_MIN_MS)
+            .setWaitForAccurateLocation(true)
+            .build()
         try {
-            val request = CurrentLocationRequest.Builder()
-                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .build()
-            val location = fusedLocationClient.getCurrentLocation(
-                request,
-                CancellationTokenSource().token
-            ).await() ?: run {
-                saveStatus(getString(R.string.error_location_unavailable))
-                return
-            }
+            fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+        } catch (e: SecurityException) {
+            saveStatus(getString(R.string.error_permissions_location))
+        }
+    }
 
+    private fun detenerActualizaciones() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    // Envía por UDP un fix recibido del callback y guarda el estado que lee la interfaz.
+    private suspend fun procesarUbicacion(location: Location) {
+        try {
             val date = obtenerFechaColombia(location.time)
             val time = obtenerHoraColombia(location.time)
             val payload = construirPayload(location)
@@ -541,8 +551,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun stopTracking() {
-        trackingJob?.cancel()
-        trackingJob = null
+        detenerActualizaciones()
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
             .putBoolean(PREF_ACTIVE, false)
             .apply()
@@ -605,7 +614,7 @@ class LocationTrackingService : Service() {
     }
 
     override fun onDestroy() {
-        trackingJob?.cancel()
+        detenerActualizaciones()
         serviceScope.cancel()
         super.onDestroy()
     }
