@@ -2,6 +2,7 @@ package com.uninorte.locator
 
 import android.location.Location
 import kotlinx.coroutines.Dispatchers
+import android.content.Context
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.DatagramPacket
@@ -73,4 +74,22 @@ internal fun construirPayload(location: Location, seq: Long? = null): String =
         if (location.hasAccuracy()) put("acc", Math.round(location.accuracy * 10) / 10.0)
         if (location.hasSpeed()) put("spd", Math.round(location.speed * 10) / 10.0)
         if (seq != null) put("seq", seq)
+    }.toString()
+
+internal const val VID_CELULAR = "celular"
+
+internal fun construirPayload(
+    location: Location,
+    seq: Long? = null,
+    vid: String? = null
+): String =
+    JSONObject().apply {
+        put("lat", location.latitude)
+        put("lng", location.longitude)
+        put("date", obtenerFechaColombia(location.time))
+        put("hour", obtenerHoraColombia(location.time))
+        if (location.hasAccuracy()) put("acc", Math.round(location.accuracy * 10) / 10.0)
+        if (location.hasSpeed()) put("spd", Math.round(location.speed * 10) / 10.0)
+        if (seq != null) put("seq", seq)
+        if (vid != null) put("vid", vid)
     }.toString()

@@ -215,7 +215,7 @@ class LocationTrackingService : Service() {
 
             val date = obtenerFechaColombia(location.time)
             val time = obtenerHoraColombia(location.time)
-            val payload = construirPayload(location, siguienteSeq())
+            val payload = construirPayload(location, siguienteSeq(), VID_CELULAR)
 
             val sent = enviarPorUdp(UDP_DESTINATIONS, payload)
             val status = if (sent) {

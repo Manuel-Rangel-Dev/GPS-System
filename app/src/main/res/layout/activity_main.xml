@@ -150,7 +150,24 @@
                 android:textSize="13sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardResult" />
+                app:layout_constraintTop_toBottomOf="@id/cardResult" />ç
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlanificar"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="@color/card_background"
+                android:text="@string/button_plan_route"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                app:cornerRadius="14dp"
+                app:strokeColor="@color/uninorte_red"
+                app:strokeWidth="1dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvStatus" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
