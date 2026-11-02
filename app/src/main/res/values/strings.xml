@@ -26,4 +26,22 @@
     <string name="action_open_settings">Ajustes</string>
     <string name="status_discarded_accuracy">Fix descartado: precisión %1$d m</string>
     <string name="status_discarded_stale">Fix descartado: tiene %1$d s de antigüedad</string>
+    <string name="button_plan_route">Planificar ruta</string>
+    <string name="title_plan_route">Planificar ruta</string>
+    <string name="hint_destination">Destino (lugar o dirección)</string>
+    <string name="button_search">Buscar</string>
+    <string name="origin_searching">Origen: buscando tu ubicación…</string>
+    <string name="origin_ok">Origen: mi ubicación (%1$.5f, %2$.5f)</string>
+    <string name="origin_unavailable">No se pudo obtener tu ubicación</string>
+    <string name="origin_no_permission">Se necesita el permiso de ubicación para usar tu posición como origen</string>
+    <string name="type_more">Escribe al menos 3 letras</string>
+    <string name="searching">Buscando…</string>
+    <string name="no_results">Sin resultados</string>
+    <string name="choose_destination">Elige tu destino</string>
+    <string name="calculating">Calculando rutas…</string>
+    <string name="routes_to">Rutas hacia %1$s</string>
+    <string name="route_item">Ruta %1$d: %2$.1f km · %3$d min</string>
+    <string name="route_traffic_extra"> (+%1$d min por tráfico)</string>
+    <string name="route_chosen">Elegiste la ruta %1$d</string>
+    <string name="error_network">No se pudo conectar: %1$s</string>
 </resources>

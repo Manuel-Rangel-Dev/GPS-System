@@ -87,6 +87,10 @@ class MainActivity : AppCompatActivity() {
         btnDebugSend.setOnClickListener { onBotonDebugPresionado() }
         actualizarEstadoDesdeServicio()
 
+        findViewById<MaterialButton>(R.id.btnPlanificar).setOnClickListener {
+            startActivity(Intent(this, PlanificarRutaActivity::class.java))
+        }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
@@ -225,7 +229,7 @@ class MainActivity : AppCompatActivity() {
             tvLatitude.text = getString(R.string.latitude_value, location.latitude)
             tvLongitude.text = getString(R.string.longitude_value, location.longitude)
 
-            val payload = construirPayload(location)
+            val payload = construirPayload(location, vid = VID_CELULAR)
 
             val ok = enviarPorUdp(UDP_DESTINATIONS, payload)
             val resultado = if (ok) {
