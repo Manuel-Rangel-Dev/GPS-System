@@ -7,7 +7,8 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED &&
-            LocationTrackingService.isActive(context)
+            LocationTrackingService.isActive(context) &&
+            Vehiculo.obtener(context) == Vehiculo.VEHICULO_2
         ) {
             try {
                 LocationTrackingService.start(context)

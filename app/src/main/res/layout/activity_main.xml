@@ -28,6 +28,80 @@
             android:layout_height="wrap_content"
             android:padding="24dp">
 
+            <LinearLayout
+                android:id="@+id/panelSelector"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/selectorVehiculo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/vehiculoKia"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vehiculo_kia" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/vehiculoDos"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vehiculo_dos" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+                <TextView android:id="@+id/avisoSelector"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/vehiculo_bloqueado" android:visibility="gone"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/panelKia"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/panelSelector"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRecorrido"
+                    android:layout_width="match_parent" android:layout_height="56dp"
+                    android:layout_marginTop="20dp"
+                    android:backgroundTint="@color/uninorte_red"
+                    android:text="@string/obd_iniciar" android:textAllCaps="false"
+                    android:textColor="@color/white" android:textSize="16sp" android:textStyle="bold"
+                    app:cornerRadius="14dp" />
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/modoEmulador"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/obd_emulador" android:textColor="@color/white" />
+                <EditText android:id="@+id/redEmulador"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="text" android:singleLine="true" android:maxLength="32"
+                    android:hint="@string/obd_red" android:textColor="@color/white"
+                    android:textColorHint="@color/text_secondary" />
+                <EditText android:id="@+id/claveEmulador"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textPassword" android:singleLine="true" android:maxLength="63"
+                    android:hint="@string/obd_clave" android:textColor="@color/white"
+                    android:textColorHint="@color/text_secondary" />
+                <TextView android:id="@+id/instruccionObd"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary" android:paddingTop="12dp" />
+                <TextView android:id="@+id/estadoObd"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" android:padding="20dp"
+                    android:background="@color/card_background"
+                    android:textColor="@color/white" android:textSize="14sp" />
+            </LinearLayout>
             <TextView
                 android:id="@+id/tvSubtitle"
                 android:layout_width="0dp"
@@ -38,7 +112,7 @@
                 android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@id/panelKia" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleEnvio"
@@ -150,7 +224,7 @@
                 android:textSize="13sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardResult" />ç
+                app:layout_constraintTop_toBottomOf="@id/cardResult" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPlanificar"

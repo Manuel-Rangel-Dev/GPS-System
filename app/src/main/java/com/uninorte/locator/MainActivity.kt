@@ -13,6 +13,13 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
+import android.widget.EditText
+import androidx.core.widget.doAfterTextChanged
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.uninorte.locator.obd.ObdTrackingService
+import java.util.Locale
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -42,14 +49,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvLastSent: TextView
     private lateinit var tvStatus: TextView
 
+    private var envioManualActivo = false
+    private var inicioPendiente = false
+    private lateinit var selectorVehiculo: MaterialButtonToggleGroup
+    private lateinit var modoEmulador: SwitchMaterial
+    private lateinit var redEmulador: EditText
+    private lateinit var claveEmulador: EditText
     private var debugModeActivo = false
 
     private val permissionLauncherAuto = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val ok = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
-        if (ok) iniciarEnvioAutomatico()
-        else mostrarErrorPermisoPreciso()
+        if (!ok) mostrarErrorPermisoPreciso()
+        else if (tienePermisoRedLocal()) iniciarSeleccionado()
+        else mostrarSnackbar(getString(R.string.obd_permiso_red))
     }
 
     private val permissionLauncherDebug = registerForActivityResult(
@@ -85,6 +99,7 @@ class MainActivity : AppCompatActivity() {
 
         btnToggleEnvio.setOnClickListener { onBotonToggleEnvioPresionado() }
         btnDebugSend.setOnClickListener { onBotonDebugPresionado() }
+        configurarVehiculos()
         actualizarEstadoDesdeServicio()
 
         findViewById<MaterialButton>(R.id.btnPlanificar).setOnClickListener {
@@ -114,33 +129,57 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_debug) {
             debugModeActivo = !debugModeActivo
-            btnDebugSend.visibility = if (debugModeActivo) View.VISIBLE else View.GONE
+            actualizarPanelVehiculo()
             return true
         }
         return super.onOptionsItemSelected(item)
     }
 
     private fun onBotonToggleEnvioPresionado() {
+        if (inicioPendiente) return
         if (LocationTrackingService.isActive(this)) {
             detenerEnvioAutomatico()
             return
         }
         if (!validarUbicacion()) return
 
-        if (tienePermisos()) {
-            iniciarEnvioAutomatico()
+        if (tienePermisos() && tienePermisoRedLocal()) {
+            iniciarSeleccionado()
         } else {
             permissionLauncherAuto.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
+                permisosRecorrido()
             )
         }
     }
 
+    private fun permisosRecorrido(): Array<String> = buildList {
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT >= 37 && Vehiculo.obtener(this@MainActivity) == Vehiculo.KIA_K3)
+            add(Manifest.permission.ACCESS_LOCAL_NETWORK)
+    }.toTypedArray()
+
+    private fun tienePermisoRedLocal(): Boolean =
+        Build.VERSION.SDK_INT < 37 || Vehiculo.obtener(this) != Vehiculo.KIA_K3 ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED
+
+    private fun iniciarSeleccionado() {
+        if (Vehiculo.obtener(this) == Vehiculo.KIA_K3) {
+            if (!validarRedEmulador()) return
+            inicioPendiente = true
+            try { ObdTrackingService.iniciar(this) }
+            catch (_: Exception) { inicioPendiente = false; mostrarSnackbar(getString(R.string.obd_error_inicio)) }
+            solicitarPermisoNotificacionesSiHaceFalta()
+        } else iniciarEnvioAutomatico()
+        actualizarPanelVehiculo()
+        btnToggleEnvio.postDelayed({ inicioPendiente = false; actualizarPanelVehiculo() }, 5_000)
+    }
+
     private fun iniciarEnvioAutomatico() {
-        LocationTrackingService.start(this)
+        if (ObdTrackingService.activo) return
+        inicioPendiente = true
+        try { LocationTrackingService.start(this) }
+        catch (_: Exception) { inicioPendiente = false; mostrarSnackbar(getString(R.string.obd_error_inicio)) }
         btnToggleEnvio.text = getString(R.string.button_stop_sending)
         solicitarPermisoNotificacionesSiHaceFalta()
     }
@@ -186,6 +225,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onBotonDebugPresionado() {
+        if (Vehiculo.obtener(this) != Vehiculo.VEHICULO_2 || ObdTrackingService.activo || envioManualActivo) return
         if (!validarUbicacion()) return
 
         if (tienePermisos()) {
@@ -201,8 +241,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enviarUbicacionManual() {
+        if (Vehiculo.obtener(this) != Vehiculo.VEHICULO_2 || ObdTrackingService.activo || envioManualActivo) return
+        envioManualActivo = true
+        actualizarPanelVehiculo()
         lifecycleScope.launch {
-            capturarYEnviarUbicacion()
+            try { capturarYEnviarUbicacion() }
+            finally { envioManualActivo = false; actualizarPanelVehiculo() }
         }
     }
 
@@ -251,6 +295,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun actualizarEstadoDesdeServicio() {
         if (!::btnToggleEnvio.isInitialized) return
+        actualizarPanelVehiculo()
         val active = LocationTrackingService.isActive(this)
         btnToggleEnvio.text = getString(
             if (active) R.string.button_stop_sending else R.string.button_start_sending
@@ -261,6 +306,97 @@ class MainActivity : AppCompatActivity() {
         state.longitude?.let { tvLongitude.text = getString(R.string.longitude_value, it) }
         state.lastSent?.let { tvLastSent.text = getString(R.string.last_sent_value, it) }
         state.status?.let { tvStatus.text = it }
+    }
+
+    private fun configurarVehiculos() {
+        selectorVehiculo = findViewById(R.id.selectorVehiculo)
+        modoEmulador = findViewById(R.id.modoEmulador)
+        redEmulador = findViewById(R.id.redEmulador)
+        claveEmulador = findViewById(R.id.claveEmulador)
+        val preferencias = getSharedPreferences("app_settings", MODE_PRIVATE)
+        // Un servicio activo prevalece sobre una preferencia restaurada por Android.
+        if (LocationTrackingService.isActive(this)) Vehiculo.guardar(this, Vehiculo.VEHICULO_2)
+        if (ObdTrackingService.activo) Vehiculo.guardar(this, Vehiculo.KIA_K3)
+        selectorVehiculo.check(if (Vehiculo.obtener(this) == Vehiculo.KIA_K3) R.id.vehiculoKia else R.id.vehiculoDos)
+        modoEmulador.isChecked = preferencias.getBoolean("obd_emulador", false)
+        redEmulador.setText(preferencias.getString("obd_ssid", "EMU_OBDII"))
+        claveEmulador.setText(preferencias.getString("obd_clave", ""))
+        selectorVehiculo.addOnButtonCheckedListener { _, id, seleccionado ->
+            if (seleccionado) {
+                Vehiculo.guardar(this, if (id == R.id.vehiculoKia) Vehiculo.KIA_K3 else Vehiculo.VEHICULO_2)
+                actualizarPanelVehiculo()
+                invalidateOptionsMenu()
+            }
+        }
+        modoEmulador.setOnCheckedChangeListener { _, marcado ->
+            preferencias.edit().putBoolean("obd_emulador", marcado).apply()
+            actualizarPanelVehiculo()
+        }
+        redEmulador.doAfterTextChanged { preferencias.edit().putString("obd_ssid", it.toString()).apply() }
+        claveEmulador.doAfterTextChanged { preferencias.edit().putString("obd_clave", it.toString()).apply() }
+        findViewById<MaterialButton>(R.id.btnRecorrido).setOnClickListener {
+            if (ObdTrackingService.activo) {
+                val pendientes = ObdTrackingService.estado.cola
+                if (pendientes > 0) MaterialAlertDialogBuilder(this)
+                    .setMessage(getString(R.string.obd_cola_finalizar, pendientes))
+                    .setPositiveButton(R.string.obd_confirmar_finalizar) { _, _ -> ObdTrackingService.detener(this) }
+                    .setNegativeButton(R.string.obd_continuar, null).show()
+                else ObdTrackingService.detener(this)
+            } else if (!LocationTrackingService.isActive(this) && !envioManualActivo) {
+                if (validarRedEmulador()) onBotonToggleEnvioPresionado()
+            }
+        }
+    }
+
+    private fun validarRedEmulador(): Boolean {
+        if (!modoEmulador.isChecked) return true
+        val ssid = redEmulador.text.toString()
+        val clave = claveEmulador.text.toString()
+        val valido = ssid.toByteArray(Charsets.UTF_8).size in 1..32 &&
+            (clave.isEmpty() || (clave.length in 8..63 && clave.all { it.code in 32..126 }))
+        if (!valido) mostrarSnackbar(getString(R.string.obd_red_invalida))
+        return valido
+    }
+
+    private fun actualizarPanelVehiculo() {
+        if (!::selectorVehiculo.isInitialized) return
+        val kia = Vehiculo.obtener(this) == Vehiculo.KIA_K3
+        val activo = ObdTrackingService.activo
+        if (activo || LocationTrackingService.isActive(this)) inicioPendiente = false
+        val bloqueado = activo || LocationTrackingService.isActive(this) || envioManualActivo || inicioPendiente
+        findViewById<View>(R.id.vehiculoKia).isEnabled = !bloqueado
+        findViewById<View>(R.id.vehiculoDos).isEnabled = !bloqueado
+        findViewById<View>(R.id.avisoSelector).visibility = if (bloqueado) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.panelKia).visibility = if (kia) View.VISIBLE else View.GONE
+        listOf(R.id.tvSubtitle, R.id.btnToggleEnvio, R.id.cardResult, R.id.tvStatus).forEach {
+            findViewById<View>(it).visibility = if (kia) View.GONE else View.VISIBLE
+        }
+        btnDebugSend.visibility = if (!kia && debugModeActivo) View.VISIBLE else View.GONE
+        btnDebugSend.isEnabled = !envioManualActivo
+        modoEmulador.isEnabled = !activo && !inicioPendiente
+        redEmulador.isEnabled = !activo && !inicioPendiente
+        claveEmulador.isEnabled = !activo && !inicioPendiente
+        redEmulador.visibility = if (modoEmulador.isChecked) View.VISIBLE else View.GONE
+        claveEmulador.visibility = redEmulador.visibility
+        findViewById<MaterialButton>(R.id.btnRecorrido).setText(if (activo) R.string.obd_finalizar else R.string.obd_iniciar)
+        findViewById<TextView>(R.id.instruccionObd).text = if (Build.VERSION.SDK_INT < 29)
+            getString(R.string.obd_instruccion_manual, if (modoEmulador.isChecked) redEmulador.text else "WIFI_OBDII")
+            else getString(R.string.obd_instruccion)
+        val estado = ObdTrackingService.estado
+        val vacio = getString(R.string.obd_vacio)
+        fun numero(valor: Double?) = valor?.let { String.format(Locale.getDefault(), "%.3f", it) } ?: vacio
+        findViewById<TextView>(R.id.estadoObd).text = getString(R.string.obd_panel,
+            getString(estado.wifi), estado.protocolo ?: getString(R.string.obd_sin_respuesta),
+            getString(if (estado.movil) R.string.obd_disponible else R.string.obd_no_disponible),
+            estado.enviadas, estado.cola, estado.descartadas, estado.ultimoEnvio ?: vacio,
+            numero(estado.consumo), numero(estado.velocidad), numero(estado.rpm),
+            estado.posicion?.let { getString(R.string.obd_posicion, it.lat, it.lng) } ?: vacio,
+            numero(estado.posicion?.precision), getString(estado.aviso))
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.action_debug)?.isVisible = Vehiculo.obtener(this) == Vehiculo.VEHICULO_2
+        return super.onPrepareOptionsMenu(menu)
     }
 
     private fun validarUbicacion(): Boolean {
