@@ -8,10 +8,6 @@ import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 data class UdpDestination(val ip: String, val port: Int)
 
@@ -53,16 +49,6 @@ internal suspend fun enviarPorUdp(destinos: List<UdpDestination>, payload: Strin
         }
     }
 
-internal fun obtenerFechaColombia(timestampMillis: Long): String =
-    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("America/Bogota")
-    }.format(Date(timestampMillis))
-
-internal fun obtenerHoraColombia(timestampMillis: Long): String =
-    SimpleDateFormat("HH:mm:ss", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("America/Bogota")
-    }.format(Date(timestampMillis))
-
 // Arma el JSON que se envía por UDP. lat/lng/date/hour son obligatorios para todos los
 // servidores del equipo; acc, spd y seq son opcionales (los servidores viejos los ignoran).
 internal fun construirPayload(location: Location, seq: Long? = null): String =
@@ -93,3 +79,6 @@ internal fun construirPayload(
         if (seq != null) put("seq", seq)
         if (vid != null) put("vid", vid)
     }.toString()
+
+// Token compartido del backend OBD; vacío omite la clave tok.
+internal const val OBD_TOKEN = ""

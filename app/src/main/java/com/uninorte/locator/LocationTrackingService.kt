@@ -57,6 +57,7 @@ class LocationTrackingService : Service() {
         }
 
         fun start(context: Context) {
+            if (com.uninorte.locator.obd.ObdTrackingService.activo) return
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_START
             }
@@ -116,6 +117,11 @@ class LocationTrackingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (com.uninorte.locator.obd.ObdTrackingService.activo) {
+            markInactive(this)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_STOP -> stopTracking()
             ACTION_START -> {
