@@ -9,7 +9,7 @@ import java.net.URL
 import java.net.URLEncoder
 
 // Servidor con la API (cambiar aquí si se usa otro)
-internal const val API_BASE_URL = "http://uninortelocator2.duckdns.org:8443"
+internal const val API_BASE_URL = "http://mrlocator.me:8443"
 
 data class Lugar(val nombre: String, val direccion: String, val lat: Double, val lon: Double)
 
