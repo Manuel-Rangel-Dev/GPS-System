@@ -122,7 +122,8 @@ class ObdTrackingService : Service() {
     private suspend fun leer(emulador: Boolean, rid: String, inicio: Long) {
         var seq = 0L
         var turno = 0
-        var fallos = 0
+        var cliente: ClienteElm? = null
+        var vigilancia = VigilanciaElm()
         var vacias = 0
         var terminada = false
         var redSocket: android.net.Network? = null
@@ -132,11 +133,15 @@ class ObdTrackingService : Service() {
                 redes.solicitarWifi()
                 val red = redes.wifi
                 if (red == null) {
+                    if (socket != null) RegistroObd.escribir("Reconexión: red Wi-Fi no disponible")
                     socket?.close(); socket = null
                     actualizar { it.copy(wifi = if (redes.errorWifi) R.string.obd_wifi_error else R.string.obd_conectando, protocolo = null) }
                     delay(1_000); continue
                 }
-                if (redSocket != red) { socket?.close(); socket = null }
+                if (redSocket != red) {
+                    if (socket != null) RegistroObd.escribir("Reconexión: cambió la red Wi-Fi")
+                    socket?.close(); socket = null
+                }
                 if (socket == null) {
                     actualizar { it.copy(wifi = R.string.obd_conectando, protocolo = null) }
                     val host = if (emulador) redes.gateway(red) ?: throw java.io.IOException() else "192.168.0.10"
@@ -146,31 +151,29 @@ class ObdTrackingService : Service() {
                     redSocket = red
                     nuevo.connect(InetSocketAddress(host, 35000), 5_000)
                     nuevo.tcpNoDelay = true
-                    val protocolo = runInterruptible { ClienteElm(nuevo).inicializar() }
+                    cliente = ClienteElm(nuevo)
+                    val protocolo = runInterruptible { cliente.inicializar() }
                     actualizar { it.copy(wifi = R.string.obd_conectada, protocolo = protocolo) }
-                    fallos = 0
+                    vigilancia = VigilanciaElm()
                 }
                 if (terminada) { delay(1_000); continue }
                 val tFila = SystemClock.elapsedRealtime()
-                val cliente = ClienteElm(socket!!)
+                val lector = checkNotNull(cliente)
                 val lento = PidsObd.lentos[turno++ % PidsObd.lentos.size]
                 var todosNoData = true
-                var reconectar = false
-                var umbralAlcanzado = false
+                var huboRespuesta = false
                 for ((i, pid) in PidsObd.pids.withIndex()) {
                     if (pid !in PidsObd.rapidos && pid != lento) continue
-                    val respuesta = runInterruptible { cliente.enviar(PidsObd.comando(pid), 300) }
-                    val valor = PidsObd.parsear(pid, respuesta)
+                    val valor = runInterruptible { lector.leerPid(pid) }
                     valores[i] = valor
-                    val noData = respuesta.contains("NO DATA", ignoreCase = true)
-                    if (pid in PidsObd.rapidos && !noData) todosNoData = false
-                    fallos = if (valor != null) 0 else fallos + 1
-                    if (fallos >= 3) umbralAlcanzado = true
-                    // NO DATA del emulador requiere leer los FAST completos durante tres filas.
-                    if (fallos >= 3 && !(emulador && noData)) { reconectar = true; break }
+                    huboRespuesta = huboRespuesta || lector.ultimoPidRespondio
+                    if (pid in PidsObd.rapidos && !lector.ultimoPidSinDatos) todosNoData = false
                 }
-                if (reconectar || (umbralAlcanzado && !(emulador && todosNoData))) { socket?.close(); socket = null; continue }
-                val posicion = if (emulador) runInterruptible { cliente.leerGps() } else posicionCelular()
+                if (vigilancia.registrarCiclo(huboRespuesta)) {
+                    RegistroObd.escribir("Reconexión: tres ciclos completos sin respuesta válida ni NO DATA")
+                    socket?.close(); socket = null; continue
+                }
+                val posicion = if (emulador) runInterruptible { lector.leerGps() } else posicionCelular()
                 vacias = if (emulador && todosNoData) vacias + 1 else 0
                 terminada = vacias >= 3
                 actualizar { it.copy(consumo = if (todosNoData) null else PidsObd.consumo(valores),
@@ -184,7 +187,8 @@ class ObdTrackingService : Service() {
                 }
                 delay((1_000 - (SystemClock.elapsedRealtime() - tFila)).coerceAtLeast(1))
             } catch (e: CancellationException) { throw e
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                RegistroObd.escribir("Reconexión: ${e.javaClass.simpleName}: ${e.message}")
                 runCatching { socket?.close() }; socket = null
                 actualizar { it.copy(wifi = R.string.obd_wifi_error, protocolo = null) }
                 delay(1_000)
