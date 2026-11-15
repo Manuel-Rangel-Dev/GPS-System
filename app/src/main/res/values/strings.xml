@@ -74,4 +74,32 @@
     <string name="obd_confirmar_finalizar">Finalizar y descartar</string>
     <string name="obd_continuar">Continuar recorrido</string>
     <string name="obd_permiso_red">Se necesita el permiso de red local para conectar el adaptador OBD.</string>
+    <string name="ruta_numero">Ruta %1$d</string>
+    <string name="sin_estimado">Sin estimado</string>
+    <string name="motivo_sin_estimado">La ruta es muy corta o lenta para el modelo.</string>
+    <string name="detalle_ruta">%1$s · %2$s</string>
+    <string name="trafico_ruta"> (+%1$s por tráfico)</string>
+    <string name="estimado_kia">Estimado para el Kia K3 con el tráfico actual</string>
+    <string name="navegar_maps">Navegar en Google Maps</string>
+    <string name="aviso_maps">Google Maps puede proponer una ruta distinta a la del mapa</string>
+    <string name="maps_no_disponible">No hay una aplicación disponible para abrir Google Maps</string>
+    <string name="atribucion_mapa">© OpenStreetMap contributors</string>
+    <string name="marcador_origen">Origen</string>
+    <string name="marcador_destino">Destino</string>
+    <string name="rutas_hechas">Rutas hechas</string>
+    <string name="titulo_recorridos">Rutas hechas · %1$s</string>
+    <plurals name="resumen_recorridos">
+        <item quantity="one">Últimos 7 días: %1$d recorrido · %2$s · %3$s</item>
+        <item quantity="other">Últimos 7 días: %1$d recorridos · %2$s · %3$s</item>
+    </plurals>
+    <string name="costo_no_disponible">—</string>
+    <string name="detalle_recorrido">%1$s · %2$s · %3$s</string>
+    <string name="recorrido_medido">Medido: %1$s</string>
+    <string name="en_curso">En curso</string>
+    <string name="emulado">Emulado</string>
+    <string name="cargando_recorridos">Cargando recorridos…</string>
+    <string name="recorridos_vacios">Aún no hay recorridos con estimado en los últimos 7 días</string>
+    <string name="recorridos_error">No se pudieron cargar los recorridos. Revisa la conexión.</string>
+    <string name="reintentar">Reintentar</string>
+    <string name="actualizar">Actualizar</string>
 </resources>

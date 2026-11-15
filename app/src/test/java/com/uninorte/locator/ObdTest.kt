@@ -177,6 +177,104 @@ class ObdTest {
         }
     }
 
+    // Streams con retardos reales: no dependen de permisos de red en la JVM.
+    // La salida rechaza un comando nuevo si aún falta consumir el prompt anterior.
+    private fun conRespuestasRetardadas(
+        respuestas: List<Pair<Long, String>>, prueba: (ClienteElm) -> Unit
+    ) {
+        var indice = 0
+        var disponibleDesde = Long.MAX_VALUE
+        var pendiente = ""
+        val entrada = object : java.io.InputStream() {
+            override fun available(): Int =
+                if (System.nanoTime() >= disponibleDesde) pendiente.length else 0
+            override fun read(): Int {
+                if (available() == 0) return -1
+                val caracter = pendiente.first()
+                pendiente = pendiente.drop(1)
+                return caracter.code
+            }
+        }
+        val salida = object : java.io.OutputStream() {
+            override fun write(b: Int) {
+                if (b != '\r'.code) return
+                assertTrue("Otro comando llegó antes del prompt pendiente", pendiente.isEmpty())
+                val (retardo, respuesta) = respuestas[indice++]
+                pendiente = respuesta + "\r>"
+                disponibleDesde = System.nanoTime() + retardo * 1_000_000
+            }
+        }
+        prueba(ClienteElm(entrada, salida))
+        assertEquals("No se enviaron los comandos esperados", respuestas.size, indice)
+    }
+
+    @Test fun aceptaPidQueTardaMasDeTrescientosMilisegundos() {
+        conRespuestasRetardadas(listOf(450L to "41 05 69")) { cliente ->
+            assertEquals(65.0, cliente.leerPid(0x05))
+            assertTrue(cliente.ultimoPidRespondio)
+        }
+    }
+
+    @Test fun descartaRespuestaTardiaAntesDeEnviarElSiguientePid() {
+        conRespuestasRetardadas(listOf(
+            (ClienteElm.TIEMPO_ESPERA_PID_MS + 250) to "41 0C 1A F8",
+            0L to "41 0D 30"
+        )) { cliente ->
+            assertNull(cliente.leerPid(0x0C))
+            assertFalse(cliente.ultimoPidRespondio)
+            assertEquals(48.0, cliente.leerPid(0x0D))
+        }
+    }
+
+    @Test fun descartaRespuestaConCabeceraDeOtroPid() {
+        conRespuestasRetardadas(listOf(0L to "41 0C 1A F8")) { cliente ->
+            assertNull(cliente.leerPid(0x0D))
+            assertFalse(cliente.ultimoPidRespondio)
+        }
+    }
+
+    @Test fun noDataRepetidoNoSolicitaReconexion() {
+        val negativas = listOf("NO DATA", "?", "NOT SUPPORTED", "N/A", "NO DATA")
+        conRespuestasRetardadas(negativas.map { 0L to it }) { cliente ->
+            val vigilancia = VigilanciaElm()
+            negativas.forEach {
+                // Un PID por ciclo basta para comprobar la política usada por el servicio.
+                assertNull(cliente.leerPid(0x0D))
+                assertTrue(cliente.ultimoPidRespondio)
+                assertFalse(vigilancia.registrarCiclo(cliente.ultimoPidRespondio))
+            }
+        }
+    }
+
+    @Test fun sinPromptNoAceptaTramaParcialNiEnviaOtroComando() {
+        var pendiente = ""
+        var comandos = 0
+        val entrada = object : java.io.InputStream() {
+            override fun available(): Int = pendiente.length
+            override fun read(): Int = pendiente.first().code.also { pendiente = pendiente.drop(1) }
+        }
+        val salida = object : java.io.OutputStream() {
+            override fun write(b: Int) {
+                if (b == '\r'.code) { comandos++; pendiente = "41 0C 1A F8" }
+            }
+        }
+        val cliente = ClienteElm(entrada, salida)
+        assertEquals("", cliente.enviar("010C1", 5))
+        assertNull(cliente.leerPid(0x0D))
+        assertFalse(cliente.ultimoPidRespondio)
+        assertEquals(1, comandos)
+    }
+
+    @Test fun reconectaSoloTrasTresCiclosSinRespuestaYReiniciaElContador() {
+        val vigilancia = VigilanciaElm()
+        assertFalse(vigilancia.registrarCiclo(false))
+        assertFalse(vigilancia.registrarCiclo(false))
+        assertFalse(vigilancia.registrarCiclo(true))
+        assertFalse(vigilancia.registrarCiclo(false))
+        assertFalse(vigilancia.registrarCiclo(false))
+        assertTrue(vigilancia.registrarCiclo(false))
+    }
+
     @Test fun simuladorExternoLeeCincoFilasSiEstaConfigurado() {
         val puerto = System.getenv("SIM_PUERTO")
         assumeTrue("SIM_PUERTO no configurado", !puerto.isNullOrBlank())

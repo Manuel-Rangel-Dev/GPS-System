@@ -45,7 +45,10 @@
 
         <activity
             android:name=".PlanificarRutaActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
+
+        <activity android:name=".RecorridosActivity" android:exported="false" />
 
         <service
             android:name=".LocationTrackingService"
