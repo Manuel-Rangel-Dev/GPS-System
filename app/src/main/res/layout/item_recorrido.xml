@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    app:cardBackgroundColor="@color/card_background" app:cardCornerRadius="12dp" app:cardElevation="0dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/fechaRecorrido" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:textColor="@color/white" android:textSize="14sp" />
+            <TextView android:id="@+id/costoRecorrido" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:textColor="@color/white" android:textStyle="bold" android:textSize="22sp" />
+        </LinearLayout>
+        <TextView android:id="@+id/detalleRecorrido" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:textColor="@color/text_secondary" android:textSize="14sp" />
+        <TextView android:id="@+id/medidoRecorrido" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:textColor="@color/text_secondary" android:textSize="13sp" android:visibility="gone" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/etiquetaEnCurso" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:padding="4dp" android:text="@string/en_curso" android:textSize="12sp"
+                android:textColor="@color/white" android:visibility="gone" />
+            <TextView android:id="@+id/etiquetaEmulado" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:padding="4dp" android:text="@string/emulado" android:textSize="12sp"
+                android:textColor="@color/text_secondary" android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

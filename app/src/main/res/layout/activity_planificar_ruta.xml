@@ -16,6 +16,7 @@
         app:titleTextColor="@color/white" />
 
     <LinearLayout
+        android:id="@+id/panelBusqueda"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -81,13 +82,46 @@
                 android:divider="@color/divider"
                 android:dividerHeight="1dp" />
 
-            <ListView
-                android:id="@+id/lvRutas"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:divider="@color/divider"
-                android:dividerHeight="1dp"
-                android:visibility="gone" />
         </FrameLayout>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/panelRutas"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="vertical" android:visibility="gone">
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <org.osmdroid.views.MapView android:id="@+id/mapa"
+                android:layout_width="match_parent" android:layout_height="match_parent" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end" android:padding="3dp"
+                android:background="@color/card_background" android:textColor="@color/white"
+                android:textSize="10sp" android:text="@string/atribucion_mapa" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="12dp" android:background="@color/card_background">
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:scrollbars="none">
+                <com.google.android.material.chip.ChipGroup android:id="@+id/selectorRutas"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    app:singleLine="true" app:singleSelection="true" app:selectionRequired="true" />
+            </HorizontalScrollView>
+            <TextView android:id="@+id/tvCosto" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" />
+            <TextView android:id="@+id/tvLitros" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/white" android:textSize="18sp" />
+            <TextView android:id="@+id/tvSinEstimado" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary" android:textSize="13sp" android:visibility="gone"
+                android:text="@string/motivo_sin_estimado" />
+            <TextView android:id="@+id/tvDetalleRuta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary" android:textSize="14sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary" android:textSize="11sp" android:text="@string/estimado_kia" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnNavegar"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/navegar_maps" android:textAllCaps="false"
+                android:backgroundTint="@color/uninorte_red" android:textColor="@color/white" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary" android:textSize="11sp" android:text="@string/aviso_maps" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

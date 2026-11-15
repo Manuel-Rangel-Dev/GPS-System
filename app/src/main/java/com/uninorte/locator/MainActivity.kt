@@ -106,6 +106,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, PlanificarRutaActivity::class.java))
         }
 
+        findViewById<MaterialButton>(R.id.btnRutasHechas).setOnClickListener {
+            startActivity(Intent(this, RecorridosActivity::class.java))
+        }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
