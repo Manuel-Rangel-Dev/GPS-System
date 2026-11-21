@@ -287,8 +287,8 @@ class PlanificarRutaActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.tvSinEstimado).visibility = if (estimado) View.GONE else View.VISIBLE
         findViewById<TextView>(R.id.tvDetalleRuta).text = getString(R.string.detalle_ruta,
-            formatearKm(ruta.distanciaM / 1000), formatearDuracion(ruta.tiempoS)) +
-            if (ruta.retrasoS > 0) getString(R.string.trafico_ruta, formatearDuracion(ruta.retrasoS)) else ""
+            // tiempoS (travelTimeInSeconds de TomTom) ya incluye el retraso por tráfico.
+            formatearKm(ruta.distanciaM / 1000), formatearDuracion(ruta.tiempoS))
         lineas.forEachIndexed { numero, linea ->
             linea.outlinePaint.color = ContextCompat.getColor(this,
                 if (numero == indice) R.color.uninorte_red else R.color.text_secondary)
