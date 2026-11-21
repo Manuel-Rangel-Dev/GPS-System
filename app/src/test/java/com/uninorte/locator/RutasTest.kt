@@ -150,13 +150,59 @@ class RutasTest {
         assertEquals(2, resultado.cantidad)
         assertEquals(3.5, resultado.litros, 0.0)
         assertEquals(100.0, resultado.costoCop, 0.0)
+        assertEquals(2, resultado.emulados)
     }
 
     @Test fun resumenVacioSoloEmuladosYUnRecorridoSinCosto() {
         assertEquals(ResumenRecorridos(0, 0.0, 0.0), resumirRecorridos(emptyList()))
         val base = parsearRecorridos("""{"recorridos":[$recorrido]}""").single()
-        assertEquals(ResumenRecorridos(0, 0.0, 0.0), resumirRecorridos(listOf(base.copy(emulado = true))))
+        assertEquals(ResumenRecorridos(0, 0.0, 0.0, emulados = 1), resumirRecorridos(listOf(base.copy(emulado = true))))
         assertEquals(ResumenRecorridos(1, 0.561, 0.0), resumirRecorridos(listOf(base.copy(costoCop = null))))
+    }
+
+    @Test fun resumenSumaMedidosRealesYCuentaEmulados() {
+        val base = parsearRecorridos("""{"recorridos":[$recorrido]}""").single()
+        val resultado = resumirRecorridos(listOf(
+            base.copy(litrosMedidos = 0.5, costoMedidoCop = 100.0),
+            base.copy(litrosMedidos = 0.0, costoMedidoCop = null),
+            base.copy(litrosMedidos = null, costoMedidoCop = 200.0),
+            base.copy(emulado = true, litrosMedidos = 99.0, costoMedidoCop = 9999.0)))
+        assertEquals(3, resultado.cantidad)
+        assertEquals(1, resultado.emulados)
+        assertEquals(0.5, resultado.litrosMedidos!!, 0.0)
+        assertEquals(300.0, resultado.costoMedidoCop!!, 0.0)
+        val sinMedido = resumirRecorridos(listOf(base))
+        assertNull(sinMedido.litrosMedidos)
+        assertNull(sinMedido.costoMedidoCop)
+        val soloEmulados = resumirRecorridos(listOf(base.copy(emulado = true, litrosMedidos = 5.0)))
+        assertEquals(0, soloEmulados.cantidad)
+        assertNull(soloEmulados.litrosMedidos)
+        assertEquals(1, soloEmulados.emulados)
+        assertEquals(0.0, resumirRecorridos(listOf(base.copy(litrosMedidos = 0.0))).litrosMedidos!!, 0.0)
+    }
+
+    @Test fun urlRecorridosCodificaVehiculoYAmbosLimites() {
+        assertEquals("/api/recorridos?vid=kia+%26+gps&desde=2026-11-15+00%3A00%3A00&hasta=2026-11-21+23%3A59%3A59",
+            rutaRecorridos("kia & gps", "2026-11-15 00:00:00", "2026-11-21 23:59:59"))
+    }
+
+    @Test fun conservaIndicadorTruncadoSinCambiarParseoDeFilas() {
+        val respuesta = parsearRespuestaRecorridos("""{"truncado":true,"recorridos":[$recorrido]}""")
+        assertTrue(respuesta.truncado)
+        assertEquals(1, respuesta.recorridos.size)
+        assertFalse(parsearRespuestaRecorridos("""{"recorridos":[]}""").truncado)
+    }
+
+    @Test fun leeErrorApiYAdmiteCuerposNoJson() {
+        assertEquals("El rango supera 31 días", mensajeErrorApi("""{"error":"El rango supera 31 días"}"""))
+        listOf(null, "", "<html>Error</html>", "{}", """{"error":null}""", """{"error":""}""").forEach {
+            assertNull(mensajeErrorApi(it))
+        }
+        val error = ErrorApi(400, "Rango inválido")
+        assertTrue(error is java.io.IOException)
+        assertEquals(400, error.codigo)
+        assertEquals("Rango inválido", error.detalle)
+        assertEquals("HTTP 500", ErrorApi(500, null).message)
     }
 
     @Test fun parseaListasVacias() {
@@ -167,6 +213,11 @@ class RutasTest {
     @Test fun formateaPesosSinDecimales() {
         assertEquals("$ 4.191", formatearPesos(4191.4))
         assertEquals("$ 0", formatearPesos(0.0))
+    }
+
+    @Test fun formateaLitrosResumenConTresDecimales() {
+        assertEquals("0,994 L", formatearLitrosResumen(0.9939))
+        assertEquals("0,000 L", formatearLitrosResumen(0.0))
     }
 
     @Test fun formateaLitrosYKilometros() {

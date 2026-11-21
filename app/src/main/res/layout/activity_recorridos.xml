@@ -6,12 +6,51 @@
     <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar"
         android:layout_width="match_parent" android:layout_height="?attr/actionBarSize"
         android:background="@color/uninorte_red" app:titleTextColor="@color/white" />
-    <TextView android:id="@+id/tvResumen" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:padding="16dp" android:textColor="@color/white" android:textSize="16sp" android:visibility="gone" />
+    <TextView android:id="@+id/barraRango" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:minHeight="48dp" android:padding="12dp" android:background="@color/card_background"
+        android:textColor="@color/white" android:clickable="true" android:focusable="true" />
+    <ScrollView android:id="@+id/selectorRango" android:layout_width="match_parent" android:layout_height="260dp"
+        android:visibility="gone" android:background="@color/card_background" android:fillViewport="false">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="8dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <Button android:id="@+id/tabDesde" style="@style/TabRango" />
+                <Button android:id="@+id/tabHasta" style="@style/TabRango" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical">
+                <Button android:id="@+id/mesAnterior" android:layout_width="48dp" android:layout_height="48dp"
+                    android:text="@string/flecha_anterior" android:contentDescription="@string/mes_anterior" android:padding="0dp" />
+                <TextView android:id="@+id/tituloMes" android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:gravity="center" android:textColor="@color/white" android:textSize="18sp" />
+                <Button android:id="@+id/mesSiguiente" android:layout_width="48dp" android:layout_height="48dp"
+                    android:text="@string/flecha_siguiente" android:contentDescription="@string/mes_siguiente" android:padding="0dp" />
+            </LinearLayout>
+            <GridLayout android:id="@+id/diasSemana" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="7" />
+            <GridLayout android:id="@+id/diasCalendario" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="7" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/hora_desde" android:textColor="@color/text_secondary" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <EditText android:id="@+id/desdeHH" style="@style/CampoHora" android:hint="@string/hh" android:contentDescription="@string/desde_hh" />
+                <EditText android:id="@+id/desdeMM" style="@style/CampoHora" android:hint="@string/mm" android:contentDescription="@string/desde_mm" />
+                <EditText android:id="@+id/desdeSS" style="@style/CampoHora" android:hint="@string/ss" android:contentDescription="@string/desde_ss" />
+                <Button android:id="@+id/desdePeriodo" android:layout_width="72dp" android:layout_height="48dp" android:textAllCaps="false" android:contentDescription="@string/desde_periodo" />
+            </LinearLayout>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/hora_hasta" android:textColor="@color/text_secondary" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <EditText android:id="@+id/hastaHH" style="@style/CampoHora" android:hint="@string/hh" android:contentDescription="@string/hasta_hh" />
+                <EditText android:id="@+id/hastaMM" style="@style/CampoHora" android:hint="@string/mm" android:contentDescription="@string/hasta_mm" />
+                <EditText android:id="@+id/hastaSS" style="@style/CampoHora" android:hint="@string/ss" android:contentDescription="@string/hasta_ss" />
+                <Button android:id="@+id/hastaPeriodo" android:layout_width="72dp" android:layout_height="48dp" android:textAllCaps="false" android:contentDescription="@string/hasta_periodo" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
     <com.google.android.material.button.MaterialButton android:id="@+id/btnActualizar"
-        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="16dp"
-        android:text="@string/actualizar" android:textAllCaps="false"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp"
+        android:text="@string/ver_recorridos" android:textAllCaps="false"
         android:backgroundTint="@color/uninorte_red" android:textColor="@color/white" />
+    <TextView android:id="@+id/tvResumen" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingStart="12dp" android:paddingEnd="12dp" android:textColor="@color/white" android:textSize="16sp" android:visibility="gone" />
+    <TextView android:id="@+id/tvResumenDetalle" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingStart="12dp" android:paddingEnd="12dp" android:textColor="@color/text_secondary" android:textSize="12sp" android:visibility="gone" />
     <ProgressBar android:id="@+id/progresoRecorridos" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal" android:visibility="gone" />
     <TextView android:id="@+id/tvEstadoRecorridos" android:layout_width="match_parent" android:layout_height="wrap_content"

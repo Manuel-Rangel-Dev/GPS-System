@@ -76,7 +76,7 @@
     <string name="obd_permiso_red">Se necesita el permiso de red local para conectar el adaptador OBD.</string>
     <string name="ruta_numero">Ruta %1$d</string>
     <string name="sin_estimado">Sin estimado</string>
-    <string name="motivo_sin_estimado">La ruta es muy corta o lenta para el modelo.</string>
+    <string name="motivo_sin_estimado">La ruta es muy corta o lenta para estimar el consumo.</string>
     <string name="detalle_ruta">%1$s · %2$s</string>
     <string name="trafico_ruta"> (+%1$s por tráfico)</string>
     <string name="estimado_kia">Estimado para tu vehículo con el tráfico actual</string>
@@ -89,8 +89,8 @@
     <string name="rutas_hechas">Rutas hechas</string>
     <string name="titulo_recorridos">Rutas hechas · %1$s</string>
     <plurals name="resumen_recorridos">
-        <item quantity="one">Últimos 7 días: %1$d recorrido · %2$s · %3$s</item>
-        <item quantity="other">Últimos 7 días: %1$d recorridos · %2$s · %3$s</item>
+        <item quantity="one">%1$d recorrido · %2$s · %3$s</item>
+        <item quantity="other">%1$d recorridos · %2$s · %3$s</item>
     </plurals>
     <string name="costo_no_disponible">—</string>
     <string name="detalle_recorrido">%1$s · %2$s · %3$s</string>
@@ -98,8 +98,43 @@
     <string name="en_curso">En curso</string>
     <string name="emulado">Emulado</string>
     <string name="cargando_recorridos">Cargando recorridos…</string>
-    <string name="recorridos_vacios">Aún no hay recorridos con estimado en los últimos 7 días</string>
+    <string name="recorridos_vacios">Sin recorridos con estimado en este rango</string>
     <string name="recorridos_error">No se pudieron cargar los recorridos. Revisa la conexión.</string>
     <string name="reintentar">Reintentar</string>
     <string name="actualizar">Actualizar</string>
+    <string name="ver_recorridos">Ver recorridos</string>
+    <string name="rango_invertido">La fecha/hora final debe ser posterior a la inicial.</string>
+    <string name="estimado_modelo">estimado del modelo</string>
+    <string name="resumen_parcial">(resumen parcial)</string>
+    <plurals name="emulados_sin_contar">
+        <item quantity="one">(%1$d emulado sin contar)</item>
+        <item quantity="other">(%1$d emulados sin contar)</item>
+    </plurals>
+    <string name="tab_desde">Desde\n%1$s</string>
+    <string name="tab_hasta">Hasta\n%1$s</string>
+    <string name="barra_rango">%1$s → %2$s  %3$s</string>
+    <string name="expandir_rango">Expandir selector de rango</string>
+    <string name="plegar_rango">Plegar selector de rango</string>
+    <string name="icono_expandir">⌄</string>
+    <string name="icono_plegar">⌃</string>
+    <string name="flecha_anterior">←</string>
+    <string name="flecha_siguiente">→</string>
+    <string name="mes_anterior">Mes anterior</string>
+    <string name="mes_siguiente">Mes siguiente</string>
+    <string name="hora_desde">Hora de inicio</string>
+    <string name="hora_hasta">Hora de fin</string>
+    <string name="hh">HH</string>
+    <string name="mm">MM</string>
+    <string name="ss">SS</string>
+    <string name="periodo_am">AM</string>
+    <string name="periodo_pm">PM</string>
+    <string-array name="dias_semana"><item>D</item><item>L</item><item>M</item><item>M</item><item>J</item><item>V</item><item>S</item></string-array>
+    <string name="desde_hh">Horas de inicio</string>
+    <string name="desde_mm">Minutos de inicio</string>
+    <string name="desde_ss">Segundos de inicio</string>
+    <string name="desde_periodo">AM/PM de inicio</string>
+    <string name="hasta_hh">Horas de fin</string>
+    <string name="hasta_mm">Minutos de fin</string>
+    <string name="hasta_ss">Segundos de fin</string>
+    <string name="hasta_periodo">AM/PM de fin</string>
 </resources>

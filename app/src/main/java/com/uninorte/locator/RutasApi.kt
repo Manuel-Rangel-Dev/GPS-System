@@ -31,7 +31,10 @@ private suspend fun getJson(ruta: String): String = withContext(Dispatchers.IO) 
         conexion.connectTimeout = 8_000
         conexion.readTimeout = 15_000
         val codigo = conexion.responseCode
-        if (codigo !in 200..299) throw IOException("HTTP $codigo")
+        if (codigo !in 200..299) {
+            val cuerpo = runCatching { conexion.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
+            throw ErrorApi(codigo, mensajeErrorApi(cuerpo))
+        }
         conexion.inputStream.bufferedReader().use { it.readText() }
     } finally {
         conexion.disconnect()
@@ -129,8 +132,25 @@ internal fun parsearRecorridos(json: String): List<Recorrido> {
     }
 }
 
-internal suspend fun pedirRecorridos(vid: String): List<Recorrido> =
-    parsearRecorridos(getJson("/api/recorridos?vid=${URLEncoder.encode(vid, "UTF-8")}"))
+internal class ErrorApi(val codigo: Int, val detalle: String?) : IOException(detalle ?: "HTTP $codigo")
+
+internal fun mensajeErrorApi(cuerpo: String?): String? = runCatching {
+    cuerpo?.let { JSONObject(it) }?.let {
+        if (it.isNull("error")) null else it.optString("error").takeIf(String::isNotBlank)
+    }
+}.getOrNull()
+
+internal data class RespuestaRecorridos(val recorridos: List<Recorrido>, val truncado: Boolean)
+
+internal fun parsearRespuestaRecorridos(json: String) =
+    RespuestaRecorridos(parsearRecorridos(json), JSONObject(json).optBoolean("truncado", false))
+
+internal fun rutaRecorridos(vid: String, desde: String, hasta: String): String =
+    "/api/recorridos?vid=${URLEncoder.encode(vid, "UTF-8")}" +
+        "&desde=${URLEncoder.encode(desde, "UTF-8")}&hasta=${URLEncoder.encode(hasta, "UTF-8")}"
+
+internal suspend fun pedirRecorridos(vid: String, desde: String, hasta: String): RespuestaRecorridos =
+    parsearRespuestaRecorridos(getJson(rutaRecorridos(vid, desde, hasta)))
 
 internal suspend fun marcarRutaElegida(prediccionId: Long, rutaId: Long) = withContext(Dispatchers.IO) {
     val conexion = URL("$API_BASE_URL/api/rutas/elegida").openConnection() as HttpURLConnection

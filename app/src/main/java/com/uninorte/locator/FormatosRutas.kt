@@ -14,6 +14,7 @@ private fun decimal(valor: Double, patron: String): String =
 
 internal fun formatearPesos(valor: Double): String = "$ " + decimal(valor, "#,##0")
 internal fun formatearLitros(valor: Double): String = decimal(valor, "0.00") + " L"
+internal fun formatearLitrosResumen(valor: Double): String = decimal(valor, "0.000") + " L"
 internal fun formatearKm(valor: Double): String = decimal(valor, "0.0") + " km"
 internal fun formatearDuracion(segundos: Double): String = "${(segundos / 60).roundToLong()} min"
 
