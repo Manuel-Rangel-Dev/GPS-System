@@ -38,7 +38,7 @@ class RecorridosActivity : AppCompatActivity() {
     private var desplegado = false
     private val idioma = Locale("es", "CO")
     private val fechaCorta = DateTimeFormatter.ofPattern("dd MMM yyyy", idioma)
-    private val horaVisible = DateTimeFormatter.ofPattern("hh:mm:ss", Locale.ROOT)
+    private val fechaHoraBarra = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss", Locale.ROOT)
     private fun corta(dia: LocalDate): String = dia.format(fechaCorta).replace(".", "")
         .split(" ").mapIndexed { indice, parte -> if (indice == 1) parte.replaceFirstChar { it.titlecase(idioma) } else parte }.joinToString(" ")
     private val camposDesde = intArrayOf(R.id.desdeHH, R.id.desdeMM, R.id.desdeSS)
@@ -209,10 +209,11 @@ class RecorridosActivity : AppCompatActivity() {
 
     private fun pintarBarra() {
         findViewById<TextView>(R.id.barraRango).apply {
-            // AM/PM explícitos para coincidir con la web en cualquier versión de Android.
-            fun fecha(dia: LocalDate, hora: Hora12): String = corta(dia) + " " + hora.a24().format(horaVisible) + " " + getString(if (hora.pm) R.string.periodo_pm else R.string.periodo_am)
-            text = getString(R.string.barra_rango, fecha(rango.desde, rango.horaDesde), fecha(rango.hasta, rango.horaHasta),
-                getString(if (desplegado) R.string.icono_plegar else R.string.icono_expandir))
+            // dd/MM/yyyy HH:mm:ss (24 h): el AM/PM queda en los campos del selector.
+            fun fecha(dia: LocalDate, hora: Hora12): String = dia.atTime(hora.a24()).format(fechaHoraBarra)
+            text = getString(R.string.barra_rango, fecha(rango.desde, rango.horaDesde), fecha(rango.hasta, rango.horaHasta))
+            setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_calendario, 0,
+                if (desplegado) R.drawable.ic_plegar else R.drawable.ic_expandir, 0)
             contentDescription = text.toString() + ". " + getString(if (desplegado) R.string.plegar_rango else R.string.expandir_rango)
         }
     }

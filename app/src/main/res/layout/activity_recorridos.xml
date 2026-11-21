@@ -7,8 +7,13 @@
         android:layout_width="match_parent" android:layout_height="?attr/actionBarSize"
         android:background="@color/uninorte_red" app:titleTextColor="@color/white" />
     <TextView android:id="@+id/barraRango" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:minHeight="48dp" android:padding="12dp" android:background="@color/card_background"
-        android:textColor="@color/white" android:clickable="true" android:focusable="true" />
+        android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp" android:minHeight="52dp" android:paddingStart="12dp"
+        android:paddingEnd="8dp" android:paddingTop="10dp" android:paddingBottom="10dp"
+        android:background="@drawable/fondo_barra_rango" android:gravity="center_vertical"
+        android:drawableStart="@drawable/ic_calendario" android:drawableEnd="@drawable/ic_expandir"
+        android:drawablePadding="10dp" android:textColor="@color/white" android:textSize="15sp"
+        android:textStyle="bold" android:clickable="true" android:focusable="true" />
     <ScrollView android:id="@+id/selectorRango" android:layout_width="match_parent" android:layout_height="260dp"
         android:visibility="gone" android:background="@color/card_background" android:fillViewport="false">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

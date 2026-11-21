@@ -112,11 +112,9 @@
     </plurals>
     <string name="tab_desde">Desde\n%1$s</string>
     <string name="tab_hasta">Hasta\n%1$s</string>
-    <string name="barra_rango">%1$s → %2$s  %3$s</string>
+    <string name="barra_rango">%1$s → %2$s</string>
     <string name="expandir_rango">Expandir selector de rango</string>
     <string name="plegar_rango">Plegar selector de rango</string>
-    <string name="icono_expandir">⌄</string>
-    <string name="icono_plegar">⌃</string>
     <string name="flecha_anterior">←</string>
     <string name="flecha_siguiente">→</string>
     <string name="mes_anterior">Mes anterior</string>

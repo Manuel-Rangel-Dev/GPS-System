@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta con borde rojo: deja claro que la barra del rango se puede tocar -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/card_background" />
+            <stroke android:width="1.5dp" android:color="@color/uninorte_red" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+</ripple>
