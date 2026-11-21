@@ -44,8 +44,8 @@
     <string name="route_traffic_extra"> (+%1$d min por tráfico)</string>
     <string name="route_chosen">Elegiste la ruta %1$d</string>
     <string name="error_network">No se pudo conectar: %1$s</string>
-    <string name="vehiculo_kia">Kia K3</string>
-    <string name="vehiculo_dos">Vehículo 2</string>
+    <string name="vehiculo_kia">Vehículo con OBD</string>
+    <string name="vehiculo_dos">Vehículo con GPS</string>
     <string name="vehiculo_bloqueado">Finaliza el envío o recorrido activo para cambiar de vehículo.</string>
     <string name="obd_iniciar">Iniciar recorrido</string>
     <string name="obd_finalizar">Finalizar recorrido</string>
@@ -55,7 +55,7 @@
     <string name="obd_red_invalida">Escribe un SSID de 1 a 32 bytes y una contraseña vacía o de 8 a 63 caracteres.</string>
     <string name="obd_instruccion">Acepta el diálogo de Android para conectar la Wi-Fi OBD. Activa datos móviles para enviar. La Wi-Fi OBD no necesita internet.</string>
     <string name="obd_instruccion_manual">Android 7–9: conéctate manualmente en Ajustes a %1$s antes de iniciar. Mantén esa Wi-Fi aunque no tenga internet y activa los datos móviles.</string>
-    <string name="obd_titulo">Recorrido Kia K3</string>
+    <string name="obd_titulo">Recorrido del vehículo con OBD</string>
     <string name="obd_conectando">Conectando</string>
     <string name="obd_conectada">Conectada</string>
     <string name="obd_wifi_error">Error de conexión; reintentando</string>
@@ -79,7 +79,7 @@
     <string name="motivo_sin_estimado">La ruta es muy corta o lenta para el modelo.</string>
     <string name="detalle_ruta">%1$s · %2$s</string>
     <string name="trafico_ruta"> (+%1$s por tráfico)</string>
-    <string name="estimado_kia">Estimado para el Kia K3 con el tráfico actual</string>
+    <string name="estimado_kia">Estimado para tu vehículo con el tráfico actual</string>
     <string name="navegar_maps">Navegar en Google Maps</string>
     <string name="aviso_maps">Google Maps puede proponer una ruta distinta a la del mapa</string>
     <string name="maps_no_disponible">No hay una aplicación disponible para abrir Google Maps</string>
