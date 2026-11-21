@@ -22,6 +22,8 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.uninorte.locator.LocationTrackingService
+import com.uninorte.locator.ModoApp
+import com.uninorte.locator.emuladorEfectivo
 import com.uninorte.locator.MainActivity
 import com.uninorte.locator.OBD_TOKEN
 import com.uninorte.locator.R
@@ -102,7 +104,7 @@ class ObdTrackingService : Service() {
             bloqueo = getSystemService(PowerManager::class.java)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "uninorte:obd").apply { acquire() }
             val preferencias = getSharedPreferences("app_settings", MODE_PRIVATE)
-            val emulador = preferencias.getBoolean("obd_emulador", false)
+            val emulador = emuladorEfectivo(ModoApp.obtener(this), preferencias.getBoolean("obd_emulador", false))
             redes = RedesObd(this, if (emulador) preferencias.getString("obd_ssid", "EMU_OBDII")!! else "WIFI_OBDII",
                 if (emulador) preferencias.getString("obd_clave", "")!! else "")
             if (!emulador) ubicacion.requestLocationUpdates(

@@ -55,7 +55,8 @@ class RecorridosActivity : AppCompatActivity() {
         vehiculo = Vehiculo.obtener(this)
         setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.titulo_recorridos,
+        supportActionBar?.title = if (ModoApp.obtener(this) == ModoApp.PRODUCTO) getString(R.string.rutas_hechas)
+            else getString(R.string.titulo_recorridos,
             getString(if (vehiculo == Vehiculo.KIA_K3) R.string.vehiculo_kia else R.string.vehiculo_dos))
         actualizar = findViewById(R.id.btnActualizar)
         estado = findViewById(R.id.tvEstadoRecorridos)

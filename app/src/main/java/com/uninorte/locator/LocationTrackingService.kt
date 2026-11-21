@@ -57,7 +57,8 @@ class LocationTrackingService : Service() {
         }
 
         fun start(context: Context) {
-            if (com.uninorte.locator.obd.ObdTrackingService.activo) return
+            if (Vehiculo.obtener(context) != Vehiculo.VEHICULO_2 ||
+                com.uninorte.locator.obd.ObdTrackingService.activo) return
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_START
             }
@@ -117,7 +118,9 @@ class LocationTrackingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (com.uninorte.locator.obd.ObdTrackingService.activo) {
+        // También se aplica al reinicio automático de un servicio de una versión anterior.
+        if (Vehiculo.obtener(this) != Vehiculo.VEHICULO_2 ||
+            com.uninorte.locator.obd.ObdTrackingService.activo) {
             markInactive(this)
             stopSelf()
             return START_NOT_STICKY

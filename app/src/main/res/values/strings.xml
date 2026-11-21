@@ -135,4 +135,6 @@
     <string name="hasta_mm">Minutos de fin</string>
     <string name="hasta_ss">Segundos de fin</string>
     <string name="hasta_periodo">AM/PM de fin</string>
+    <string name="funciones_desarrollador">Funciones de desarrollador</string>
+    <string name="modo_cambio_bloqueado">Finaliza el envío o recorrido activo para cambiar de modo.</string>
 </resources>
